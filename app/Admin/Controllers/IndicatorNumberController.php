@@ -28,9 +28,10 @@ class IndicatorNumberController extends AdminController
     {
         $grid = new Grid(new IndicatorNumber());
 
-        $grid->column('indicator', __('Chỉ số'))->display(function () {
-            return Indicator::where('code', '=', $this->indicator)->first()->name;
+        $grid->column('indicator', __('Chỉ số'))->display(function ($indicator) {
+            return Indicator::where('code', $indicator)->first()->name;
         });
+        // $grid->column('indicator', __('Chỉ số'));
         $grid->column('number', __('Number'));
         // $grid->column('short_description', __('Short description'));
         // $grid->column('description', __('Description'));
@@ -76,9 +77,9 @@ class IndicatorNumberController extends AdminController
     {
         $form = new Form(new IndicatorNumber());
 
-        $form->text('indicator', __('Indicator'));
+        $form->select('indicator', __('Indicator'))->options(Indicator::all()->pluck('name', 'code'));
         $form->number('number', __('Number'));
-        $form->text('short_description', __('Short description'));
+        // $form->text('short_description', __('Short description'));
         $form->ckeditor('description', __('Description'))->options(['lang' => 'en', 'height' => 300]);
 
         return $form;

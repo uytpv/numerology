@@ -275,7 +275,8 @@ class Indicator extends Model
         $p_one = self::totalIgnoreMaster($r_one + $r_two);
         $p_two = self::totalIgnoreMaster($r_two + $r_three);
         $p_three = self::totalIgnoreMaster($p_one + $p_two);
-        $p_four = self::totalIgnoreMaster($r_one + $r_three);
+        // duy nhất chặng cuối có thể có số 11
+        $p_four = self::total(self::totalIgnoreMaster(date('m', $dateValue)) + self::totalIgnoreMaster(date('Y', $dateValue)));
 
         $age_one = 36 - $life_path;
         $age_two = $age_one + 9;

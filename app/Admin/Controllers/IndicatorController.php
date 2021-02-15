@@ -35,6 +35,9 @@ class IndicatorController extends AdminController
         // $grid->column('code', __('Code'))->width(300);
         $grid->column('short_description', __('Mô tả ngắn'))->width(300);
 
+        $grid->column('id', 'Xem số')->display(function ($id) {
+            return '<a href="' . env('APP_URL') . '/admin/indicator-numbers?indicator=' . Indicator::find($id)->code . '">Xem số</a>';
+        });
         $grid->disableFilter();
         $grid->disableRowSelector();
         $grid->disableColumnSelector();
@@ -105,5 +108,4 @@ class IndicatorController extends AdminController
         });
         return $form;
     }
-
 }

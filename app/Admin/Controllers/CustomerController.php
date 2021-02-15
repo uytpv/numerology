@@ -10,11 +10,9 @@ use Encore\Admin\Form;
 use Encore\Admin\Grid;
 use Encore\Admin\Show;
 
-use App\Admin\Controllers\ShowMapController;
 use Encore\Admin\Layout\Column;
 use Encore\Admin\Layout\Content;
 use Encore\Admin\Layout\Row;
-use Illuminate\Routing\Route;
 
 class CustomerController extends AdminController
 {
@@ -115,7 +113,7 @@ class CustomerController extends AdminController
             ]);
             array_push($map, [
                 'indicator' => 'lpe_bridge',
-                'number' => Indicator::total(Indicator::LifePathCalc($form->model()) - Indicator::ExpressionCalc($form->model()))
+                'number' => Indicator::total(abs(Indicator::LifePathCalc($form->model()) - Indicator::ExpressionCalc($form->model())))
             ]);
             array_push($map, [
                 'indicator' => 'heart_desire',
