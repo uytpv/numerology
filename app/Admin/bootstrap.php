@@ -19,3 +19,6 @@
  */
 
 Encore\Admin\Form::forget(['map', 'editor']);
+
+Admin::css(env('APP_URL').'/css/style.css');
+

@@ -406,7 +406,7 @@
                     console.log( "Không tìm thấy dữ liệu.");
                 } else {
                     // set values
-                    $('#short-description').append( response.short_description );
+                    // $('#short-description').append( response.short_description );
                     $('#description').append( response.description );
                     // and so on
                 }
