@@ -229,15 +229,15 @@
                     <div class="box-header">
                         <h4 class="text-center indicator-name">
                             {{ Indicator::where(['code' => $map[12]->indicator])->first()->name }}
-                            <p class="number">
-                                @foreach ($map[12]->number as $index => $number)
-                                <a indicator="{{ $map[12]->indicator }}"
-                                    number="{{ $number }}"
-                                    data-toggle="modal" data-target="#QuickInfo"
-                                    class="number showQuickInfo">{{ $number }}{{ (($index + 1) < sizeof($map[12]->number)) ? ',' : '' }}</a>
-                                @endforeach
-                            </p>
                         </h4>
+                        <p class="text-center">
+                            @foreach ($map[12]->number as $index => $number)
+                            <a indicator="{{ $map[12]->indicator }}"
+                                number="{{ $number }}"
+                                data-toggle="modal" data-target="#QuickInfo"
+                                class="number showQuickInfo">{{ $number }}{{ (($index + 1) < sizeof($map[12]->number)) ? ',' : '' }}</a>
+                            @endforeach
+                        </p>
                         {{-- <small>{{ Indicator::where(['code'=> $map[12]->indicator])->first()->short_description }}</small> --}}
                     </div>
                 </div>
@@ -247,15 +247,15 @@
                     <div class="box-header">
                         <h4 class="text-center indicator-name">
                             {{ Indicator::where(['code' => $map[9]->indicator])->first()->name }}
-                            <p class="number">
-                                @foreach ($map[9]->number as $index => $number)
-                                <a indicator="{{ $map[9]->indicator }}"
-                                    number="{{ $number }}"
-                                    data-toggle="modal" data-target="#QuickInfo"
-                                    class="number showQuickInfo">{{ $number }}{{ (($index + 1) < sizeof($map[9]->number)) ? ',' : '' }}</a>
-                                @endforeach
-                            </p>
                         </h4>
+                        <p class="text-center">
+                            @foreach ($map[9]->number as $index => $number)
+                            <a indicator="{{ $map[9]->indicator }}"
+                                number="{{ $number }}"
+                                data-toggle="modal" data-target="#QuickInfo"
+                                class="number showQuickInfo">{{ $number }}{{ (($index + 1) < sizeof($map[9]->number)) ? ',' : '' }}</a>
+                            @endforeach
+                        </p>
                         {{-- <small>{{ Indicator::where(['code'=> $map[9]->indicator])->first()->short_description }}</small> --}}
                     </div>
                 </div>
