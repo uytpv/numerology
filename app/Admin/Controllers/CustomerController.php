@@ -37,8 +37,13 @@ class CustomerController extends AdminController
         $grid->column('dob', __('Ngày sinh'))->display(function () {
             return date('d-m-Y', strtotime($this->dob));
         });
+        $grid->column('map', __('Đường đời'))->display(function($map){
+
+            return json_decode($this->map)[0]->number;
+        })->label();
         $grid->column('phone', __('Số điện thoại'));
         $grid->column('email', __('Email'));
+
         $grid->column('created_at', __('Created at'))->hide();
         $grid->column('updated_at', __('Updated at'))->hide();
 
@@ -164,6 +169,14 @@ class CustomerController extends AdminController
                 'number' => Indicator::ChallengeAndPinnacleCalc($form->model())['pinnacle']
             ]);
             array_push($map, [
+                'indicator' => 'age',
+                'number' => Indicator::ChallengeAndPinnacleCalc($form->model())['age']
+            ]);
+            array_push($map, [
+                'indicator' => 'root',
+                'number' => Indicator::ChallengeAndPinnacleCalc($form->model())['root']
+            ]);
+            array_push($map, [
                 'indicator' => 'year',
                 'number' => Indicator::YearAndMonthCalc($form->model())
             ]);
@@ -191,12 +204,13 @@ class CustomerController extends AdminController
             ->row(view('admin.title', compact('customer')))
             ->row(
                 function (Row $row) use ($map) {
-                    $row->column(2, function (Column $column) {
-                    });
-                    $row->column(8, function (Column $column) use ($map) {
+                    // $row->column(2, function (Column $column) {
+                    // });
+                    $row->column(6, function (Column $column) use ($map) {
                         $column->append(view('admin.map', ['map' => $map]));
                     });
-                    $row->column(2, function (Column $column) {
+                    $row->column(6, function (Column $column) use ($map) {
+                        $column->append(view('admin.year', ['map' => $map]));
                     });
                 }
             );
