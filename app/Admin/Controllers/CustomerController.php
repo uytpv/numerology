@@ -38,7 +38,7 @@ class CustomerController extends AdminController
         $grid->column('dob', __('Ngày sinh'))->display(function () {
             return date('d-m-Y', strtotime($this->dob));
         })->hide();
-        $grid->column('map', __('Đường đời'))->display(function($map){
+        $grid->column('map', __('LP'))->display(function($map){
             return json_decode($this->map)[0]->number;
         })->label();
         $grid->column('phone', __('Số điện thoại'))->hide();
@@ -48,13 +48,21 @@ class CustomerController extends AdminController
         $grid->column('updated_at', __('Updated at'))->hide();
 
         $grid->actions(function ($actions) {
-
             $actions->disableDelete();
             $actions->disableView();
             $actions->add(new NumerologyCalculate);
         });
 
+        $grid->filter(function($filter){
 
+            // Remove the default id filter
+            $filter->disableIdFilter();
+
+            // Add a column filter
+            $filter->like('last_name', 'Họ và chữ lót');
+            $filter->like('first_name', 'Tên');
+
+        });
         return $grid;
     }
 
