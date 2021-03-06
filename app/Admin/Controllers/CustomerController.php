@@ -42,8 +42,8 @@ class CustomerController extends AdminController
 
             return json_decode($this->map)[0]->number;
         })->label();
-        $grid->column('phone', __('Số điện thoại'));
-        $grid->column('email', __('Email'));
+        $grid->column('phone', __('Số điện thoại'))->hide();
+        $grid->column('email', __('Email'))->hide();
 
         $grid->column('created_at', __('Created at'))->hide();
         $grid->column('updated_at', __('Updated at'))->hide();
@@ -99,12 +99,12 @@ class CustomerController extends AdminController
         $form->datetime('dob', __('Ngày Sinh'))->default(date('Y-m-d'))->rules('required', [
             'required' => 'Bắt buộc nhập'
         ]);
-        $form->email('email', __('Email'))->rules('required', [
-            'required' => 'Bắt buộc nhập'
-        ]);
-        $form->mobile('phone', __('Số điện thoại'))->rules('required', [
-            'required' => 'Bắt buộc nhập'
-        ]);
+        // $form->email('email', __('Email'))->rules('required', [
+        //     'required' => 'Bắt buộc nhập'
+        // ]);
+        // $form->mobile('phone', __('Số điện thoại'))->rules('required', [
+        //     'required' => 'Bắt buộc nhập'
+        // ]);
 
         $form->saved(function (Form $form) {
             $map = [];
