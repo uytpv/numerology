@@ -31,6 +31,7 @@ class CustomerController extends AdminController
     protected function grid()
     {
         $grid = new Grid(new Customer());
+        $grid->model()->orderBy('id', 'desc');
 
         $grid->column('last_name', __('Họ và chữ lót'));
         $grid->column('first_name', __('Tên'));
