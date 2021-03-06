@@ -37,9 +37,8 @@ class CustomerController extends AdminController
         $grid->column('first_name', __('Tên'));
         $grid->column('dob', __('Ngày sinh'))->display(function () {
             return date('d-m-Y', strtotime($this->dob));
-        });
+        })->hide();
         $grid->column('map', __('Đường đời'))->display(function($map){
-
             return json_decode($this->map)[0]->number;
         })->label();
         $grid->column('phone', __('Số điện thoại'))->hide();
