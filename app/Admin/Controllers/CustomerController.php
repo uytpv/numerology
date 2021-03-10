@@ -38,7 +38,7 @@ class CustomerController extends AdminController
         $grid->column('dob', __('Ngày sinh'))->display(function () {
             return date('d-m-Y', strtotime($this->dob));
         })->hide();
-        $grid->column('map', __('LP'))->display(function($map){
+        $grid->column('map', __('LP'))->display(function ($map) {
             return json_decode($this->map)[0]->number;
         })->label();
         $grid->column('phone', __('Số điện thoại'))->hide();
@@ -53,7 +53,7 @@ class CustomerController extends AdminController
             $actions->add(new NumerologyCalculate);
         });
 
-        $grid->filter(function($filter){
+        $grid->filter(function ($filter) {
 
             // Remove the default id filter
             $filter->disableIdFilter();
@@ -61,7 +61,6 @@ class CustomerController extends AdminController
             // Add a column filter
             $filter->like('last_name', 'Họ và chữ lót');
             $filter->like('first_name', 'Tên');
-
         });
         return $grid;
     }
@@ -88,6 +87,16 @@ class CustomerController extends AdminController
         return $show;
     }
 
+    public function getDataNascimentoAttribute($value)
+    {
+        return \Carbon\Carbon::parse($value)->format('d/m/Y');
+    }
+
+    public function setDataNascimentoAttribute($value)
+    {
+        $this->attributes['data_nascimento'] = \Carbon\Carbon::createFromFormat('d/m/Y', $value)->format('Y-m-d');
+    }
+
     /**
      * Make a form builder.
      *
@@ -103,15 +112,22 @@ class CustomerController extends AdminController
         $form->text('first_name', __('Tên'))->rules('required', [
             'required' => 'Bắt buộc nhập'
         ]);
-        $form->datetime('dob', __('Ngày Sinh'))->default(date('Y-m-d'))->rules('required', [
+
+        $form->date('dob', __('Ngày Sinh'))->rules('required', [
             'required' => 'Bắt buộc nhập'
-        ]);
+        ])->format('DD-MM-YYYY');
+
         // $form->email('email', __('Email'))->rules('required', [
         //     'required' => 'Bắt buộc nhập'
         // ]);
         // $form->mobile('phone', __('Số điện thoại'))->rules('required', [
         //     'required' => 'Bắt buộc nhập'
         // ]);
+
+        $form->saving(function (Form $form) {
+            $arrDate = explode('-', $form->dob);
+            $form->dob = $arrDate[2] . '-' . $arrDate[1] . '-' . $arrDate[0];
+        });
 
         $form->saved(function (Form $form) {
             $map = [];
