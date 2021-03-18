@@ -261,9 +261,9 @@ class Indicator extends Model
     {
         $dateValue = strtotime($customer->dob);
 
-        $r_three = self::total(date('Y', $dateValue)); // total số năm sinh
-        $r_one = self::total(date('m', $dateValue)); // total số tháng sinh
-        $r_two = self::total(date('d', $dateValue)); // total số ngày sinh
+        $r_three = self::totalIgnoreMaster(date('Y', $dateValue)); // total số năm sinh
+        $r_one = self::totalIgnoreMaster(date('m', $dateValue)); // total số tháng sinh
+        $r_two = self::totalIgnoreMaster(date('d', $dateValue)); // total số ngày sinh
 
         $life_path = self::totalIgnoreMaster($r_three + $r_one + $r_two); // chỉ số đường đời này bỏ qua các số Master
 
@@ -275,7 +275,7 @@ class Indicator extends Model
         $p_one = self::totalIgnoreMaster($r_one + $r_two);
         $p_two = self::totalIgnoreMaster($r_two + $r_three);
         $p_three = self::totalIgnoreMaster($p_one + $p_two);
-        // duy nhất chặng cuối có thể có số 11
+        // duy nhất chặng cuối có thể có số master
         $p_four = self::total(self::totalIgnoreMaster(date('m', $dateValue)) + self::totalIgnoreMaster(date('Y', $dateValue)));
 
         $age_one = 36 - $life_path;
@@ -302,7 +302,7 @@ class Indicator extends Model
         $this_year = self::total(date('Y'));
 
         $p_yrs_mon = [];
-        for ($i = -1; $i < 9; $i++) {
+        for ($i = 0; $i < 9; $i++) {
             $y = self::totalIgnoreMaster($date + $month + $this_year + $i);
 
             $p_yrs_mon[$y] = [];

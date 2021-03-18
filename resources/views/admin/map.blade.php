@@ -436,5 +436,5 @@
         });
     }
 
-    document.getElementById("year").innerHTML = new Date().getFullYear() - 1;
+    // document.getElementById("year").innerHTML = new Date().getFullYear() - 1;
 </script>

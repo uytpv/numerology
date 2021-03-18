@@ -7,6 +7,8 @@ use Encore\Admin\Controllers\AdminController;
 use Encore\Admin\Form;
 use Encore\Admin\Grid;
 use Encore\Admin\Show;
+use Encore\Admin\Facades\Admin;
+
 
 class NumberController extends AdminController
 {
@@ -38,14 +40,17 @@ class NumberController extends AdminController
             $ext = substr($image, - (strlen($image) - strpos($image, '.') - 1));
             return '<img src="' . env('APP_URL') . '/uploads/' . rtrim($image, '.' . $ext) . '-small.' . $ext . '" class="img img-thumbnail">';
         });
-        $grid->column('id', 'Xem chỉ số')->display(function ($id) {
-            return '<a href="' . env('APP_URL') . '/admin/indicator-numbers?number=' . Number::find($id)->number . '">Xem chỉ số</a>';
-        });
+        if (Admin::user()->isAdministrator()) {
+            $grid->column('id', 'Xem chỉ số')->display(function ($id) {
+                return '<a href="' . env('APP_URL') . '/admin/indicator-numbers?number=' . Number::find($id)->number . '">Xem chỉ số</a>';
+            });
+        }
         $grid->disableFilter();
         $grid->disableRowSelector();
         $grid->disableColumnSelector();
         $grid->disableTools();
         $grid->disableExport();
+        Admin::user()->isAdministrator() ?: $grid->disableActions();
         $grid->actions(function (Grid\Displayers\Actions $actions) {
             $actions->disableView();
         });

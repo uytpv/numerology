@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Routing\Router;
 
 /*
 |--------------------------------------------------------------------------
@@ -13,6 +14,9 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
+Route::group([
+], function (Router $router) {
+
+    $router->get('/', 'HomeController@index');
+    // $router->get('showDetail/{indicator}/{number}', 'IndicatorNumberController@showDetail');
 });
