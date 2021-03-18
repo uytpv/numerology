@@ -5,7 +5,10 @@ namespace App\Admin\Controllers;
 use App\Admin\Actions\Post\NumerologyCalculate;
 use App\Models\Customer;
 use App\Models\Indicator;
+use Encore\Admin\Facades\Admin;
 use Encore\Admin\Controllers\AdminController;
+use Encore\Admin\Auth\Database\Administrator;
+
 use Encore\Admin\Form;
 use Encore\Admin\Grid;
 use Encore\Admin\Show;
@@ -31,7 +34,9 @@ class CustomerController extends AdminController
     protected function grid()
     {
         $grid = new Grid(new Customer());
-        $grid->model()->orderBy('id', 'desc');
+        $currentUserId = Admin::user()->id;
+
+        $grid->model()->where('admin_id', '=', $currentUserId)->orderBy('id', 'desc');
 
         $grid->column('last_name', __('Họ và chữ lót'));
         $grid->column('first_name', __('Tên'));
@@ -43,12 +48,10 @@ class CustomerController extends AdminController
         })->label();
         $grid->column('phone', __('Số điện thoại'))->hide();
         $grid->column('email', __('Email'))->hide();
-
         $grid->column('created_at', __('Created at'))->hide();
         $grid->column('updated_at', __('Updated at'))->hide();
 
         $grid->actions(function ($actions) {
-            $actions->disableDelete();
             $actions->disableView();
             $actions->add(new NumerologyCalculate);
         });
@@ -116,6 +119,8 @@ class CustomerController extends AdminController
         $form->date('dob', __('Ngày Sinh'))->rules('required', [
             'required' => 'Bắt buộc nhập'
         ])->format('DD-MM-YYYY');
+
+        $form->hidden('admin_id')->value(Admin::user()->id);
 
         // $form->email('email', __('Email'))->rules('required', [
         //     'required' => 'Bắt buộc nhập'

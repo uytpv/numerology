@@ -7,6 +7,8 @@ use Encore\Admin\Controllers\AdminController;
 use Encore\Admin\Form;
 use Encore\Admin\Grid;
 use Encore\Admin\Show;
+use Encore\Admin\Facades\Admin;
+
 
 class IndicatorController extends AdminController
 {
@@ -34,15 +36,17 @@ class IndicatorController extends AdminController
         $grid->column('eng_name', __('Tiếng Anh'))->width(300);
         // $grid->column('code', __('Code'))->width(300);
         $grid->column('short_description', __('Mô tả ngắn'))->width(300);
-
-        $grid->column('id', 'Xem số')->display(function ($id) {
-            return '<a href="' . env('APP_URL') . '/admin/indicator-numbers?indicator=' . Indicator::find($id)->code . '">Xem số</a>';
-        });
+        if (Admin::user()->isAdministrator()) {
+            $grid->column('id', 'Xem số')->display(function ($id) {
+                return '<a href="' . env('APP_URL') . '/admin/indicator-numbers?indicator=' . Indicator::find($id)->code . '">Xem số</a>';
+            });
+        }
         $grid->disableFilter();
         $grid->disableRowSelector();
         $grid->disableColumnSelector();
         $grid->disableTools();
         $grid->disableExport();
+        Admin::user()->isAdministrator() ?: $grid->disableActions();
         $grid->actions(function (Grid\Displayers\Actions $actions) {
             $actions->disableView();
         });
