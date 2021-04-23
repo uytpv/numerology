@@ -9,5 +9,6 @@
 	<link rel="stylesheet" href="{{ env('APP_URL') }}/vendor/free-css-sports/css/bootstrap.css">
 	<link rel="stylesheet" href="{{ env('APP_URL') }}/vendor/free-css-sports/fonts/font-awesome-4.3.0/css/font-awesome.min.css">
 	<link rel="stylesheet" href="{{ env('APP_URL') }}/vendor/free-css-sports/css/all.css">
+    <link rel="stylesheet" href="{{ env('APP_URL') }}/css/style.css">
 	<link href='http://fonts.googleapis.com/css?family=Montserrat:400,700|Source+Sans+Pro:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
 </head>

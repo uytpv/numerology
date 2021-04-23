@@ -134,83 +134,9 @@ class CustomerController extends AdminController
             $form->dob = $arrDate[2] . '-' . $arrDate[1] . '-' . $arrDate[0];
         });
 
-        $form->saved(function (Form $form) {
-            $map = [];
-
-            array_push($map, [
-                'indicator' => 'life_path',
-                'number' => Indicator::LifePathCalc($form->model())
-            ]);
-            array_push($map, [
-                'indicator' => 'expression',
-                'number' => Indicator::ExpressionCalc($form->model())
-            ]);
-            array_push($map, [
-                'indicator' => 'lpe_bridge',
-                'number' => Indicator::total(abs(Indicator::LifePathCalc($form->model()) - Indicator::ExpressionCalc($form->model())))
-            ]);
-            array_push($map, [
-                'indicator' => 'heart_desire',
-                'number' => Indicator::HeartDesireCalc($form->model())
-            ]);
-            array_push($map, [
-                'indicator' => 'personality',
-                'number' => Indicator::PersonalityCalc($form->model())
-            ]);
-            array_push($map, [
-                'indicator' => 'hdp_bridge',
-                'number' => abs(Indicator::HeartDesireCalc($form->model()) - Indicator::PersonalityCalc($form->model()))
-            ]);
-            array_push($map, [
-                'indicator' => 'balance',
-                'number' => Indicator::BalanceCalc($form->model())
-            ]);
-            array_push($map, [
-                'indicator' => 'birthday',
-                'number' => Indicator::BirthdayCalc($form->model())
-            ]);
-            array_push($map, [
-                'indicator' => 'maturity',
-                'number' => Indicator::total(Indicator::LifePathCalc($form->model()) + Indicator::ExpressionCalc($form->model()))
-            ]);
-            array_push($map, [
-                'indicator' => 'karmic_lessons',
-                'number' => Indicator::KarmicLessonsCalc($form->model())
-            ]);
-            array_push($map, [
-                'indicator' => 'rational_thought',
-                'number' => Indicator::RationalThoughtCalc($form->model())
-            ]);
-            array_push($map, [
-                'indicator' => 'subconscious_confidence',
-                'number' => 9 - sizeof(Indicator::KarmicLessonsCalc($form->model()))
-            ]);
-            array_push($map, [
-                'indicator' => 'hidden_passion',
-                'number' => Indicator::HiddenPassionCalc($form->model())
-            ]);
-            array_push($map, [
-                'indicator' => 'challennge',
-                'number' => Indicator::ChallengeAndPinnacleCalc($form->model())['challenge']
-            ]);
-            array_push($map, [
-                'indicator' => 'pinnacle',
-                'number' => Indicator::ChallengeAndPinnacleCalc($form->model())['pinnacle']
-            ]);
-            array_push($map, [
-                'indicator' => 'age',
-                'number' => Indicator::ChallengeAndPinnacleCalc($form->model())['age']
-            ]);
-            array_push($map, [
-                'indicator' => 'root',
-                'number' => Indicator::ChallengeAndPinnacleCalc($form->model())['root']
-            ]);
-            array_push($map, [
-                'indicator' => 'year',
-                'number' => Indicator::YearAndMonthCalc($form->model())
-            ]);
+        $form->saved(function (Form $form) {;
             $cus = $form->model();
-            $cus->map = json_encode($map);
+            $cus->map = json_encode(Customer::calculateMap($form->model()));
             $cus->save();
         });
 

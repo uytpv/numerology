@@ -18,5 +18,6 @@ Route::group([
 ], function (Router $router) {
 
     $router->get('/', 'HomeController@index');
+    $router->post('/', 'HomeController@showMap');
     // $router->get('showDetail/{indicator}/{number}', 'IndicatorNumberController@showDetail');
 });
