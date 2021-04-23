@@ -41,7 +41,7 @@
             <div class="card text-center">
                 <div class="card-body">
                     <h5 class="card-title">{{ Indicator::where(['code' => $map[1]->indicator])->first()->name }}</h5>
-                    <div class="badge rounded-pill badge-outline-warning">{{ $map[0]->number }}</div>
+                    <div class="badge rounded-pill badge-outline-warning">{{ $map[1]->number }}</div>
                 </div>
             </div>
         </div>
