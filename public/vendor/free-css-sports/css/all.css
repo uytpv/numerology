@@ -173,7 +173,7 @@ p {
   transform: rotate(-45deg); }
 
 .visual {
-  min-height: 800px;
+  min-height: 440px;
   position: relative;
   overflow: hidden;
   text-align: center;
