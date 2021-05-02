@@ -29,7 +29,7 @@
 	</section>
     @isset($map)
     <div class="row">
-        <div class="col-sm-4">
+        <div class="col-sm-3">
             <div class="card text-center">
                 <div class="card-body">
                     <h5 class="card-title">{{ Indicator::where(['code' => $map[0]->indicator])->first()->name }}</h5>
@@ -37,25 +37,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-sm-4">
-            <div class="card text-center">
-                <div class="card-body">
-                    <h5 class="card-title">{{ Indicator::where(['code' => $map[1]->indicator])->first()->name }}</h5>
-                    <div class="badge rounded-pill badge-outline-warning">{{ $map[1]->number }}</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-sm-4">
-            <div class="card text-center">
-                <div class="card-body">
-                    <h5 class="card-title">{{ Indicator::where(['code' => $map[8]->indicator])->first()->name }}</h5>
-                    <div class="badge rounded-pill badge-outline-warning">{{ $map[8]->number }}</div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-sm-4">
+        <div class="col-sm-3">
             <div class="card text-center">
                 <div class="card-body">
                     <h5 class="card-title">{{ Indicator::where(['code' => $map[3]->indicator])->first()->name }}</h5>
@@ -63,19 +45,19 @@
                 </div>
             </div>
         </div>
-        <div class="col-sm-4">
+        <div class="col-sm-3">
             <div class="card text-center">
                 <div class="card-body">
-                    <h5 class="card-title">{{ Indicator::where(['code' => $map[4]->indicator])->first()->name }}</h5>
-                    <div class="badge rounded-pill badge-outline-warning">{{ $map[4]->number }}</div>
+                    <h5 class="card-title">{{ Indicator::where(['code' => $map[6]->indicator])->first()->name }}</h5>
+                    <div class="badge rounded-pill badge-outline-warning">{{ $map[6]->number }}</div>
                 </div>
             </div>
         </div>
-        <div class="col-sm-4">
+        <div class="col-sm-3">
             <div class="card text-center">
                 <div class="card-body">
-                    <h5 class="card-title">{{ Indicator::where(['code' => $map[7]->indicator])->first()->name }}</h5>
-                    <div class="badge rounded-pill badge-outline-warning">{{ $map[7]->number }}</div>
+                    <h5 class="card-title">{{ Indicator::where(['code' => $map[10]->indicator])->first()->name }}</h5>
+                    <div class="badge rounded-pill badge-outline-warning">{{ $map[10]->number }}</div>
                 </div>
             </div>
         </div>
