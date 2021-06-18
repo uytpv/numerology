@@ -48,6 +48,7 @@ class CustomerController extends AdminController
         })->label();
         $grid->column('phone', __('Số điện thoại'))->hide();
         $grid->column('email', __('Email'))->hide();
+        $grid->column('note', __('Ghi chú'))->hide();
         $grid->column('created_at', __('Created at'))->hide();
         $grid->column('updated_at', __('Updated at'))->hide();
 
@@ -118,22 +119,16 @@ class CustomerController extends AdminController
 
         $form->date('dob', __('Ngày Sinh'))->rules('required', [
             'required' => 'Bắt buộc nhập'
-        ])->format('DD-MM-YYYY');
+        ])->format('DD/MM/YYYY');
 
         $form->hidden('admin_id')->value(Admin::user()->id);
+        $form->mobile('phone', __('Số điện thoại'));
+        $form->email('email', __('Email'));
+        
+        $form->text('note', __('Ghi chú'));
+        // SQL ALTER TABLE `customers` ADD `note` CHAR(255) NULL DEFAULT NULL AFTER `admin_id`;
 
-        // $form->email('email', __('Email'))->rules('required', [
-        //     'required' => 'Bắt buộc nhập'
-        // ]);
-        // $form->mobile('phone', __('Số điện thoại'))->rules('required', [
-        //     'required' => 'Bắt buộc nhập'
-        // ]);
-
-        $form->saving(function (Form $form) {
-            $arrDate = explode('-', $form->dob);
-            $form->dob = $arrDate[2] . '-' . $arrDate[1] . '-' . $arrDate[0];
-        });
-
+        
         $form->saved(function (Form $form) {;
             $cus = $form->model();
             $cus->map = json_encode(Customer::calculateMap($form->model()));
@@ -170,4 +165,6 @@ class CustomerController extends AdminController
                 }
             );
     }
+
+    
 }

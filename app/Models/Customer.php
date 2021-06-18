@@ -95,4 +95,14 @@ class Customer extends Model
         ]);
         return $map;
     }
+
+    public function getDobAttribute($value)
+    {
+        return \Carbon\Carbon::parse($value)->format('d/m/Y');
+    }
+
+    public function setDobAttribute($value)
+    {
+        $this->attributes['dob'] = \Carbon\Carbon::createFromFormat('d/m/Y', $value)->format('Y-m-d');
+    }
 }
