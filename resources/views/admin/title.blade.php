@@ -30,5 +30,6 @@
 </div>
 <div class="links">
     <a href="javascript:void(0)">{{ $customer->last_name .' '. $customer->first_name }} </a>
-    <a href="javascript:void(0)">{{ date('d-m-Y', strtotime($customer->dob)) }}</a>
+    {{-- <a href="javascript:void(0)">{{ date('d-m-Y', strtotime($customer->dob)) }}</a> --}}
+    <a href="javascript:void(0)">{{ $customer->dob }}</a>
 </div>

@@ -67,6 +67,7 @@ class CustomerController extends AdminController
             $filter->like('first_name', 'Tên');
         });
         return $grid;
+        
     }
 
     /**
@@ -89,16 +90,6 @@ class CustomerController extends AdminController
         $show->field('updated_at', __('Updated at'));
 
         return $show;
-    }
-
-    public function getDataNascimentoAttribute($value)
-    {
-        return \Carbon\Carbon::parse($value)->format('d/m/Y');
-    }
-
-    public function setDataNascimentoAttribute($value)
-    {
-        $this->attributes['data_nascimento'] = \Carbon\Carbon::createFromFormat('d/m/Y', $value)->format('Y-m-d');
     }
 
     /**
@@ -126,12 +117,53 @@ class CustomerController extends AdminController
         $form->email('email', __('Email'));
         
         $form->text('note', __('Ghi chú'));
-        // SQL ALTER TABLE `customers` ADD `note` CHAR(255) NULL DEFAULT NULL AFTER `admin_id`;
 
+
+        $form->hidden('life_path');
+        $form->hidden('expression');
+        $form->hidden('lpe_bridge');
+        $form->hidden('heart_desire');
+        $form->hidden('personality');
+        $form->hidden('hdp_bridge');
+        $form->hidden('balance');
+        $form->hidden('birthday');
+        $form->hidden('maturity');
+        $form->hidden('karmic_lessons');
+        $form->hidden('rational_thought');
+        $form->hidden('subconscious_confidence');
+        $form->hidden('hidden_passion');
+        $form->hidden('challennge');
+        $form->hidden('pinnacle');
+        $form->hidden('age');
+        $form->hidden('root');
+        $form->hidden('year');
+        $form->saving(function (Form $form){
+            
+        });
         
         $form->saved(function (Form $form) {;
             $cus = $form->model();
             $cus->map = json_encode(Customer::calculateMap($form->model()));
+
+            $cus->life_path = Indicator::LifePathCalc($form->model());
+            $cus->expression = Indicator::ExpressionCalc($form->model());
+            $cus->lpe_bridge = abs(Indicator::totalIgnoreMaster($cus->life_path) - Indicator::totalIgnoreMaster($cus->expression));
+            $cus->heart_desire = Indicator::HeartDesireCalc($form->model());
+            $cus->personality = Indicator::PersonalityCalc($form->model());
+            $cus->hdp_bridge = abs(Indicator::totalIgnoreMaster($cus->heart_desire) - Indicator::totalIgnoreMaster($cus->personality));
+            $cus->balance = Indicator::BalanceCalc($form->model());
+            $cus->birthday = Indicator::BirthdayCalc($form->model());
+            $cus->maturity = Indicator::total($cus->life_path + $cus->expression);
+            $cus->karmic_lessons = Indicator::KarmicLessonsCalc($form->model());
+            $cus->rational_thought = Indicator::RationalThoughtCalc($form->model());
+            $cus->subconscious_confidence = 9 - sizeof($cus->karmic_lessons);
+            $cus->hidden_passion = Indicator::HiddenPassionCalc($form->model());
+            $cus->challennge = Indicator::ChallengeAndPinnacleCalc($form->model())['challenge'];
+            $cus->pinnacle = Indicator::ChallengeAndPinnacleCalc($form->model())['pinnacle'];
+            $cus->age = Indicator::ChallengeAndPinnacleCalc($form->model())['age'];
+            $cus->root = Indicator::ChallengeAndPinnacleCalc($form->model())['root'];
+            $cus->year = Indicator::YearAndMonthCalc($form->model());
+
             $cus->save();
         });
 

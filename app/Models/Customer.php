@@ -16,7 +16,29 @@ use Illuminate\Database\Eloquent\Model;
 class Customer extends Model
 {
     protected $table = 'customers';
-    protected $fillable = ['fist_name', 'last_name', 'phone', 'email', 'dob', 'map', 'admin_id', 'note', 'created_at', 'updated_at'];
+    protected $fillable = [
+        'fist_name', 'last_name', 'phone', 'email', 'dob', 'map', 'admin_id', 'note', 'created_at', 'updated_at',
+        'life_path',
+        'expression',
+        'lpe_bridge',
+        'heart_desire',
+        'personality',
+        'hdp_bridge',
+        'balance',
+        'birthday',
+        'maturity',
+        'karmic_lessons',
+        'rational_thought',
+        'subconscious_confidence',
+        'hidden_passion',
+        'challennge',
+        'pinnacle',
+        'age',
+        'root',
+        'year'
+    ];
+
+
     public static function calculateMap($customer)
     {
         $map = [];
