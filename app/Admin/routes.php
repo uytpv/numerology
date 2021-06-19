@@ -19,5 +19,5 @@ Route::group([
     $router->get('showMap/{id}', 'CustomerController@showMap');
     $router->get('showDetail/{indicator}/{number}', 'IndicatorNumberController@showDetail');
 
-    $router->post('batch-update', 'CustomerController@updatePost');
+    $router->post('customers/batch-update', 'CustomerController@updatePost');
 });

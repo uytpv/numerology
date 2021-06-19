@@ -55,12 +55,12 @@
             <div class="col col-lg-4 col-md-4 col-xs-4">
                 <div class="box box-primary">
                     <div class="box-header">
-                        <h4 class="text-center indicator-name">{{ Indicator::where(['code' => $map[0]->indicator])->first()->name }}</h4>
+                        <h4 class="text-center indicator-name">Đường Đời</h4>
                         <p class="text-center">
-                            <a indicator="{{ $map[0]->indicator }}"
-                            number="{{ $map[0]->number }}"
+                            <a indicator="life_path"
+                            number="{{ $cus->life_path }}"
                             data-toggle="modal" data-target="#QuickInfo"
-                            class="number showQuickInfo">{{ $map[0]->number }}</a>
+                            class="number showQuickInfo">{{ $cus->life_path }}</a>
                             </p>
                         {{-- <small>{{ Indicator::where(['code'=> $map[0]->indicator])->first()->short_description }}</small> --}}
                     </div>
@@ -69,14 +69,12 @@
             <div class="col col-lg-4 col-md-4 col-xs-4">
                 <div class="box box-primary">
                     <div class="box-header">
-                        <h4 class="text-center indicator-name">
-                            {{ Indicator::where(['code' => $map[1]->indicator])->first()->name }}
-                        </h4>
+                        <h4 class="text-center indicator-name">Sứ Mệnh</h4>
                         <p class="text-center">
-                            <a indicator="{{ $map[1]->indicator }}"
-                                number="{{ $map[1]->number }}"
+                            <a indicator="expression"
+                                number="{{ $cus->expression }}"
                                 data-toggle="modal" data-target="#QuickInfo"
-                                class="number showQuickInfo">{{ $map[1]->number }}</a>
+                                class="number showQuickInfo">{{ $cus->expression }}</a>
                             </p>
                         {{-- <small>{{ Indicator::where(['code'=> $map[1]->indicator])->first()->short_description }}</small> --}}
                     </div>
@@ -85,14 +83,12 @@
             <div class="col col-lg-4 col-md-4 col-xs-4">
                 <div class="box box-primary">
                     <div class="box-header">
-                        <h4 class="text-center indicator-name">
-                            {{ Indicator::where(['code' => $map[2]->indicator])->first()->name }}
-
-                        </h4>
-                        <p class="text-center"><a indicator="{{ $map[2]->indicator }}"
-                            number="{{ $map[2]->number }}"
+                        <h4 class="text-center indicator-name">KN Đường Đời - Sứ Mệnh</h4>
+                        <p class="text-center">
+                            <a indicator="lpe_bridge"
+                            number="{{ $cus->lpe_bridge }}"
                             data-toggle="modal" data-target="#QuickInfo"
-                            class="number showQuickInfo">{{ $map[2]->number }}</a></p>
+                            class="number showQuickInfo">{{ $cus->lpe_bridge }}</a></p>
                         {{-- <small>{{ Indicator::where(['code'=> $map[2]->indicator])->first()->short_description }}</small> --}}
                     </div>
                 </div>
@@ -102,13 +98,12 @@
             <div class="col col-lg-4 col-md-4 col-xs-4">
                 <div class="box box-primary">
                     <div class="box-header">
-                        <h4 class="text-center indicator-name">
-                            {{ Indicator::where(['code' => $map[3]->indicator])->first()->name }}
-                        </h4>
-                        <p class="text-center"><a indicator="{{ $map[3]->indicator }}"
-                            number="{{ $map[3]->number }}"
+                        <h4 class="text-center indicator-name">Linh Hồn</h4>
+                        <p class="text-center">
+                            <a indicator="heart_desire"
+                            number="{{ $cus->heart_desire }}"
                             data-toggle="modal" data-target="#QuickInfo"
-                            class="number showQuickInfo">{{ $map[3]->number }}</a></p>
+                            class="number showQuickInfo">{{ $cus->heart_desire }}</a></p>
                         {{-- <small>{{ Indicator::where(['code'=> $map[3]->indicator])->first()->short_description }}</small> --}}
                     </div>
                 </div>
@@ -116,14 +111,11 @@
             <div class="col col-lg-4 col-md-4 col-xs-4">
                 <div class="box box-primary">
                     <div class="box-header">
-                        <h4 class="text-center indicator-name">
-                                {{ Indicator::where(['code' => $map[4]->indicator])->first()->name }}
-
-                        </h4>
-                        <p class="text-center"><a indicator="{{ $map[4]->indicator }}"
-                            number="{{ $map[4]->number }}"
+                        <h4 class="text-center indicator-name">Nhân Cách</h4>
+                        <p class="text-center"><a indicator="personality"
+                            number="{{ $cus->personality }}"
                             data-toggle="modal" data-target="#QuickInfo"
-                            class="number showQuickInfo">{{ $map[4]->number }}</a></p>
+                            class="number showQuickInfo">{{ $cus->personality }}</a></p>
                         {{-- <small>{{ Indicator::where(['code'=> $map[4]->indicator])->first()->short_description }}</small> --}}
                     </div>
                 </div>
@@ -131,14 +123,12 @@
             <div class="col col-lg-4 col-md-4 col-xs-4">
                 <div class="box box-primary">
                     <div class="box-header">
-                        <h4 class="text-center indicator-name">
-                            {{ Indicator::where(['code' => $map[5]->indicator])->first()->name }}
-
-                        </h4>
-                        <p class="text-center"><a indicator="{{ $map[5]->indicator }}"
-                            number="{{ $map[5]->number }}"
+                        <h4 class="text-center indicator-name">KN Linh Hồn - Nhân Cách</h4>
+                        <p class="text-center">
+                            <a indicator="hdp_bridge"
+                            number="{{ $cus->hdp_bridge }}"
                             data-toggle="modal" data-target="#QuickInfo"
-                            class="number showQuickInfo">{{ $map[5]->number }}</a></p>
+                            class="number showQuickInfo">{{ $cus->hdp_bridge }}</a></p>
                         {{-- <small>{{ Indicator::where(['code'=> $map[5]->indicator])->first()->short_description }}</small> --}}
                     </div>
                 </div>
@@ -148,14 +138,12 @@
             <div class="col col-lg-4 col-md-4 col-xs-4">
                 <div class="box box-primary">
                     <div class="box-header">
-                        <h4 class="text-center indicator-name">
-                            {{ Indicator::where(['code' => $map[6]->indicator])->first()->name }}
-
-                        </h4>
-                        <p class="text-center"><a indicator="{{ $map[6]->indicator }}"
-                            number="{{ $map[6]->number }}"
+                        <h4 class="text-center indicator-name">Cân Bằng</h4>
+                        <p class="text-center">
+                            <a indicator="balance"
+                            number="{{ $cus->balance }}"
                             data-toggle="modal" data-target="#QuickInfo"
-                            class="number showQuickInfo">{{ $map[6]->number }}</a></p>
+                            class="number showQuickInfo">{{ $cus->balance }}</a></p>
                         {{-- <small>{{ Indicator::where(['code'=> $map[6]->indicator])->first()->short_description }}</small> --}}
                     </div>
                 </div>
@@ -163,14 +151,11 @@
             <div class="col col-lg-4 col-md-4 col-xs-4">
                 <div class="box box-primary">
                     <div class="box-header">
-                        <h4 class="text-center indicator-name">
-                            {{ Indicator::where(['code' => $map[7]->indicator])->first()->name }}
-
-                        </h4>
-                        <p class="text-center"><a indicator="{{ $map[7]->indicator }}"
-                            number="{{ $map[7]->number }}"
+                        <h4 class="text-center indicator-name">Ngày Sinh</h4>
+                        <p class="text-center"><a indicator="birthday"
+                            number="{{ $cus->birthday }}"
                             data-toggle="modal" data-target="#QuickInfo"
-                            class="number showQuickInfo">{{ $map[7]->number }}</a></p>
+                            class="number showQuickInfo">{{ $cus->birthday }}</a></p>
                         {{-- <small>{{ Indicator::where(['code'=> $map[7]->indicator])->first()->short_description }}</small> --}}
                     </div>
                 </div>
@@ -178,14 +163,11 @@
             <div class="col col-lg-4 col-md-4 col-xs-4">
                 <div class="box box-primary">
                     <div class="box-header">
-                        <h4 class="text-center indicator-name">
-                            {{ Indicator::where(['code' => $map[8]->indicator])->first()->name }}
-
-                        </h4>
-                        <p class="text-center"><a indicator="{{ $map[8]->indicator }}"
-                            number="{{ $map[8]->number }}"
+                        <h4 class="text-center indicator-name">Trưởng Thành</h4>
+                        <p class="text-center"><a indicator="maturity"
+                            number="{{ $cus->maturity }}"
                             data-toggle="modal" data-target="#QuickInfo"
-                            class="number showQuickInfo">{{ $map[8]->number }}</a></p>
+                            class="number showQuickInfo">{{ $cus->maturity }}</a></p>
                         {{-- <small>{{ Indicator::where(['code'=> $map[8]->indicator])->first()->short_description }}</small> --}}
                     </div>
                 </div>
@@ -195,14 +177,11 @@
             <div class="col col-lg-6 col-md-6 col-xs-6">
                 <div class="box box-primary">
                     <div class="box-header">
-                        <h4 class="text-center indicator-name">
-                            {{ Indicator::where(['code' => $map[10]->indicator])->first()->name }}
-
-                        </h4>
-                        <p class="text-center"><a indicator="{{ $map[10]->indicator }}"
-                            number="{{ $map[10]->number }}"
+                        <h4 class="text-center indicator-name">Tư Duy Lý Trí</h4>
+                        <p class="text-center"><a indicator="rational_thought"
+                            number="{{ $cus->rational_thought }}"
                             data-toggle="modal" data-target="#QuickInfo"
-                            class="number showQuickInfo">{{ $map[10]->number }}</a></p>
+                            class="number showQuickInfo">{{ $cus->rational_thought }}</a></p>
                         {{-- <small>{{ Indicator::where(['code'=> $map[10]->indicator])->first()->short_description }}</small> --}}
                     </div>
                 </div>
@@ -210,14 +189,11 @@
             <div class="col col-lg-6 col-md-6 col-xs-6">
                 <div class="box box-primary">
                     <div class="box-header">
-                        <h4 class="text-center indicator-name">
-                            {{ Indicator::where(['code' => $map[11]->indicator])->first()->name }}
-
-                        </h4>
-                        <p class="text-center"><a indicator="{{ $map[11]->indicator }}"
-                            number="{{ $map[11]->number }}"
+                        <h4 class="text-center indicator-name">Sức Mạnh Tiềm Thức</h4>
+                        <p class="text-center"><a indicator="subconscious_confidence"
+                            number="{{ $cus->subconscious_confidence }}"
                             data-toggle="modal" data-target="#QuickInfo"
-                            class="number showQuickInfo">{{ $map[11]->number }}</a></p>
+                            class="number showQuickInfo">{{ $cus->subconscious_confidence }}</a></p>
                         {{-- <small>{{ Indicator::where(['code'=> $map[11]->indicator])->first()->short_description }}</small> --}}
                     </div>
                 </div>
@@ -227,15 +203,13 @@
             <div class="col col-lg-6 col-md-6 col-xs-6">
                 <div class="box box-primary">
                     <div class="box-header">
-                        <h4 class="text-center indicator-name">
-                            {{ Indicator::where(['code' => $map[12]->indicator])->first()->name }}
-                        </h4>
+                        <h4 class="text-center indicator-name">Đam Mê Tiềm Ẩn</h4>
                         <p class="text-center">
-                            @foreach ($map[12]->number as $index => $number)
-                            <a indicator="{{ $map[12]->indicator }}"
+                            @foreach (json_decode($cus->hidden_passion) as $index => $number)
+                            <a indicator="hidden_passion"
                                 number="{{ $number }}"
                                 data-toggle="modal" data-target="#QuickInfo"
-                                class="number showQuickInfo">{{ $number }}{{ (($index + 1) < sizeof($map[12]->number)) ? ',' : '' }}</a>
+                                class="number showQuickInfo">{{ $number }}{{ (($index + 1) < sizeof(json_decode($cus->hidden_passion))) ? ',' : '' }}</a>
                             @endforeach
                         </p>
                         {{-- <small>{{ Indicator::where(['code'=> $map[12]->indicator])->first()->short_description }}</small> --}}
@@ -245,15 +219,13 @@
             <div class="col col-lg-6 col-md-6 col-xs-6">
                 <div class="box box-primary">
                     <div class="box-header">
-                        <h4 class="text-center indicator-name">
-                            {{ Indicator::where(['code' => $map[9]->indicator])->first()->name }}
-                        </h4>
+                        <h4 class="text-center indicator-name">Chỉ Số Thiếu</h4>
                         <p class="text-center">
-                            @foreach ($map[9]->number as $index => $number)
-                            <a indicator="{{ $map[9]->indicator }}"
+                            @foreach (json_decode($cus->karmic_lessons) as $index => $number)
+                            <a indicator="karmic_lessons"
                                 number="{{ $number }}"
                                 data-toggle="modal" data-target="#QuickInfo"
-                                class="number showQuickInfo">{{ $number }}{{ (($index + 1) < sizeof($map[9]->number)) ? ',' : '' }}</a>
+                                class="number showQuickInfo">{{ $number }}{{ (($index + 1) < sizeof(json_decode($cus->karmic_lessons))) ? ',' : '' }}</a>
                             @endforeach
                         </p>
                         {{-- <small>{{ Indicator::where(['code'=> $map[9]->indicator])->first()->short_description }}</small> --}}
@@ -267,76 +239,76 @@
                 {{-- {{ dd($map[16]) }} --}}
                 <h4 class="text-center indicator-name">Sơ Đồ Chặng | Thách Thức | 4 Đỉnh Cao Cuộc Đời</h4>
                 <div class="buildingBlock">
-                    <a indicator="{{ $map[14]->indicator }}"
-                        number="{{ $map[14]->number[3] }}"
+                    <a indicator="pinnacle"
+                        number="{{ json_decode($cus->pinnacle)[3] }}"
                         data-toggle="modal" data-target="#QuickInfo"
-                        class="number showQuickInfo">{{ $map[14]->number[3] }}</a>
-                    <sub>{{$map[15]->number[3]}}</sub></div>
+                        class="number showQuickInfo">{{ json_decode($cus->pinnacle)[3] }}</a>
+                    <sub>{{ json_decode($cus->age)[3]}}</sub></div>
                 <div></div>
                 <div class="buildingBlock">
-                    <a indicator="{{ $map[14]->indicator }}"
-                        number="{{ $map[14]->number[2] }}"
+                    <a indicator="pinnacle"
+                        number="{{ json_decode($cus->pinnacle)[2] }}"
                         data-toggle="modal" data-target="#QuickInfo"
-                        class="number showQuickInfo">{{ $map[14]->number[2] }}</a>
-                    <sub>{{$map[15]->number[2]}}</sub></div>
+                        class="number showQuickInfo">{{ json_decode($cus->pinnacle)[2] }}</a>
+                    <sub>{{ json_decode($cus->age)[2] }}</sub></div>
                 <div></div>
                 <div class="buildingBlock">
-                    <a indicator="{{ $map[14]->indicator }}"
-                        number="{{ $map[14]->number[0] }}"
+                    <a indicator="pinnacle"
+                        number="{{ json_decode($cus->pinnacle)[0] }}"
                         data-toggle="modal" data-target="#QuickInfo"
-                        class="number showQuickInfo">{{ $map[14]->number[0] }}</a>
-                    <sub>{{$map[15]->number[0]}}</sub></div>
+                        class="number showQuickInfo">{{ json_decode($cus->pinnacle)[0] }}</a>
+                    <sub>{{ json_decode($cus->age)[0] }}</sub></div>
                 <div class="buildingBlock">
-                    <a indicator="{{ $map[14]->indicator }}"
-                        number="{{ $map[14]->number[1] }}"
+                    <a indicator="pinnacle"
+                        number="{{ json_decode($cus->pinnacle)[1] }}"
                         data-toggle="modal" data-target="#QuickInfo"
-                        class="number showQuickInfo">{{ $map[14]->number[1] }}</a>
-                    <sub>{{$map[15]->number[1]}}</sub></div>
+                        class="number showQuickInfo">{{ json_decode($cus->pinnacle)[1] }}</a>
+                    <sub>{{ json_decode($cus->age)[1] }}</sub></div>
                 <div></div>
                 <div class="buildingBlock">
-                    <a indicator="{{ $map[16]->indicator }}"
-                        number="{{ $map[16]->number[0] }}"
+                    <a indicator="root"
+                        number="{{ json_decode($cus->root)[0] }}"
                         data-toggle="modal" data-target="#QuickInfo"
-                        class="number showQuickInfo">{{ $map[16]->number[0] }}</a>
+                        class="number showQuickInfo">{{ json_decode($cus->root)[0] }}</a>
                 </div>
                 <div class="buildingBlock">
-                    <a indicator="{{ $map[16]->indicator }}"
-                        number="{{ $map[16]->number[1] }}"
+                    <a indicator="root"
+                        number="{{ json_decode($cus->root)[1] }}"
                         data-toggle="modal" data-target="#QuickInfo"
-                        class="number showQuickInfo">{{ $map[16]->number[1] }}</a>
+                        class="number showQuickInfo">{{ json_decode($cus->root)[1] }}</a>
                 </div>
                 <div class="buildingBlock">
-                    <a indicator="{{ $map[16]->indicator }}"
-                        number="{{ $map[16]->number[2] }}"
+                    <a indicator="root"
+                        number="{{ json_decode($cus->root)[2] }}"
                         data-toggle="modal" data-target="#QuickInfo"
-                        class="number showQuickInfo">{{ $map[16]->number[2] }}</a>
-                </div>
-                <div></div>
-                <div class="buildingBlock">
-                    <a indicator="{{ $map[13]->indicator }}"
-                        number="{{ $map[13]->number[0] }}"
-                        data-toggle="modal" data-target="#QuickInfo"
-                        class="number showQuickInfo">{{ $map[13]->number[0] }}</a>
-                </div>
-                <div class="buildingBlock">
-                    <a indicator="{{ $map[13]->indicator }}"
-                        number="{{ $map[13]->number[1] }}"
-                        data-toggle="modal" data-target="#QuickInfo"
-                        class="number showQuickInfo">{{ $map[13]->number[1] }}</a>
+                        class="number showQuickInfo">{{ json_decode($cus->root)[2] }}</a>
                 </div>
                 <div></div>
                 <div class="buildingBlock">
-                    <a indicator="{{ $map[13]->indicator }}"
-                        number="{{ $map[13]->number[2] }}"
+                    <a indicator="challennge"
+                        number="{{ json_decode($cus->challennge)[0] }}"
                         data-toggle="modal" data-target="#QuickInfo"
-                        class="number showQuickInfo">{{ $map[13]->number[2] }}</a>
+                        class="number showQuickInfo">{{ json_decode($cus->challennge)[0] }}</a>
+                </div>
+                <div class="buildingBlock">
+                    <a indicator="challennge"
+                        number="{{ json_decode($cus->challennge)[1] }}"
+                        data-toggle="modal" data-target="#QuickInfo"
+                        class="number showQuickInfo">{{ json_decode($cus->challennge)[1] }}</a>
                 </div>
                 <div></div>
                 <div class="buildingBlock">
-                    <a indicator="{{ $map[13]->indicator }}"
-                        number="{{ $map[13]->number[3] }}"
+                    <a indicator="challennge"
+                        number="{{ json_decode($cus->challennge)[2] }}"
                         data-toggle="modal" data-target="#QuickInfo"
-                        class="number showQuickInfo">{{ $map[13]->number[3] }}</a>
+                        class="number showQuickInfo">{{ json_decode($cus->challennge)[2] }}</a>
+                </div>
+                <div></div>
+                <div class="buildingBlock">
+                    <a indicator="challennge"
+                        number="{{ json_decode($cus->challennge)[3] }}"
+                        data-toggle="modal" data-target="#QuickInfo"
+                        class="number showQuickInfo">{{ json_decode($cus->challennge)[3] }}</a>
                 </div>
                 <div></div>
              </div>

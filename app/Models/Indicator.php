@@ -312,6 +312,25 @@ class Indicator extends Model
                 array_push($p_yrs_mon[$y], self::totalIgnoreMaster($y + ($j + 1)));
             }
         }
+        
         return $p_yrs_mon;
+    }
+
+    public static function getIndicatorWithMasterArr()
+    {
+        return [
+            1 => '1', 
+            2 => '2', 
+            3 => '3', 
+            4 => '4', 
+            5 => '5', 
+            6 => '6', 
+            7 => '7', 
+            8 => '8',
+            9 => '8',
+            11 => '11',
+            22 => '22',
+            33 => '33'
+        ];
     }
 }

@@ -8,7 +8,7 @@
         <div class="col col-lg-12">
             <div class="box box-primary">
                 <div class="box-header">
-                    <h4 class="text-center">Chỉ Số {{ Indicator::where(['code' => $map[17]->indicator])->first()->name }}</h4>
+                    <h4 class="text-center">Chỉ Số Năm Cá Nhân</h4>
                 </div>
             </div>
             <table class="table table-striped">
@@ -30,15 +30,15 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($map[17]->number as $year => $months)
+                    @foreach(json_decode($cus->year) as $year => $months)
                     <tr>
                         <th scope="row">
-                            <a indicator="{{ $map[17]->indicator }}"
+                            <a indicator="Năm"
                                 number="{{ $year }}"
                                 data-toggle="modal" data-target="#QuickInfo"
                                 style="cursor: pointer"
                                 class="showQuickInfo">{{ $year }}</a>
-                        </th>
+                        </th><?php  ?>
                             @foreach($months as $month)
                         <td>
                             <a indicator="month"
@@ -54,6 +54,5 @@
             </table>
         </div>
     </div>
-
 </div>
 

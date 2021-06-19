@@ -44,7 +44,9 @@ class CustomerController extends AdminController
         $grid->column('dob', __('Ngày sinh'))->display(function () {
             return date('d-m-Y', strtotime($this->dob));
         })->hide();
-        $grid->column('life_path', __('LP'))->label();
+        $grid->column('life_path', __('ĐĐ'))->label();
+        $grid->column('expression', __('SM'))->label();
+        $grid->column('heart_desire', __('LH'))->label();
         // $grid->column('map', __('LP'))->display(function ($map) {
         //     return json_decode($this->map)[0]->number;
         // })->label();
@@ -72,13 +74,13 @@ class CustomerController extends AdminController
             // Add a column filter
             $filter->like('last_name', 'Họ và chữ lót');
             $filter->like('first_name', 'Tên');
+            $filter->in('life_path', 'Đường Đời')->multipleSelect(Indicator::getIndicatorWithMasterArr());
         });
         return $grid;
     }
 
     /**
      * Make a show builder.
-     *
      * @param mixed $id
      * @return Show
      */
@@ -121,7 +123,7 @@ class CustomerController extends AdminController
         $form->hidden('admin_id')->value(Admin::user()->id);
         $form->mobile('phone', __('Số điện thoại'));
         $form->email('email', __('Email'));
-        
+
         $form->text('note', __('Ghi chú'));
 
         $form->hidden('life_path');
@@ -142,10 +144,9 @@ class CustomerController extends AdminController
         $form->hidden('age');
         $form->hidden('root');
         $form->hidden('year');
-        $form->saving(function (Form $form){
-            
+        $form->saving(function (Form $form) {
         });
-        
+
         $form->saved(function (Form $form) {;
             $cus = $form->model();
             $cus = Customer::calculateIndicators($form->model());
@@ -170,21 +171,21 @@ class CustomerController extends AdminController
         return $content
             ->row(view('admin.title', compact('customer')))
             ->row(
-                function (Row $row) use ($map) {
+                function (Row $row) use ($customer) {
                     // $row->column(2, function (Column $column) {
                     // });
-                    $row->column(6, function (Column $column) use ($map) {
-                        $column->append(view('admin.map', ['map' => $map]));
+                    $row->column(6, function (Column $column) use ($customer) {
+                        $column->append(view('admin.map', ['cus' => $customer]));
                     });
-                    $row->column(6, function (Column $column) use ($map) {
-                        $column->append(view('admin.year', ['map' => $map]));
+                    $row->column(6, function (Column $column) use ($customer) {
+                        $column->append(view('admin.year', ['cus' => $customer]));
                     });
                 }
             );
     }
 
-  
-    
+
+
     public function updatePost(Request $request)
     {
         foreach (Customer::find($request->get('ids')) as $cus) {
@@ -192,5 +193,4 @@ class CustomerController extends AdminController
             $cus->save();
         }
     }
-
 }

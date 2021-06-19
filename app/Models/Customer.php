@@ -48,15 +48,15 @@ class Customer extends Model
         $customer->balance = Indicator::BalanceCalc($customer);
         $customer->birthday = Indicator::BirthdayCalc($customer);
         $customer->maturity = Indicator::total($customer->life_path + $customer->expression);
-        $customer->karmic_lessons = Indicator::KarmicLessonsCalc($customer);
+        $customer->karmic_lessons = json_encode(Indicator::KarmicLessonsCalc($customer));
         $customer->rational_thought = Indicator::RationalThoughtCalc($customer);
-        $customer->subconscious_confidence = 9 - sizeof($customer->karmic_lessons);
-        $customer->hidden_passion = Indicator::HiddenPassionCalc($customer);
-        $customer->challennge = Indicator::ChallengeAndPinnacleCalc($customer)['challenge'];
-        $customer->pinnacle = Indicator::ChallengeAndPinnacleCalc($customer)['pinnacle'];
-        $customer->age = Indicator::ChallengeAndPinnacleCalc($customer)['age'];
-        $customer->root = Indicator::ChallengeAndPinnacleCalc($customer)['root'];
-        $customer->year = Indicator::YearAndMonthCalc($customer);
+        $customer->subconscious_confidence = 9 - sizeof(json_decode($customer->karmic_lessons));
+        $customer->hidden_passion = json_encode(Indicator::HiddenPassionCalc($customer));
+        $customer->challennge = json_encode(Indicator::ChallengeAndPinnacleCalc($customer)['challenge']);
+        $customer->pinnacle = json_encode(Indicator::ChallengeAndPinnacleCalc($customer)['pinnacle']);
+        $customer->age = json_encode(Indicator::ChallengeAndPinnacleCalc($customer)['age']);
+        $customer->root = json_encode(Indicator::ChallengeAndPinnacleCalc($customer)['root']);
+        $customer->year = json_encode(Indicator::YearAndMonthCalc($customer));
         $customer->map = json_encode(Customer::calculateMap($customer));
         return $customer;
     }
