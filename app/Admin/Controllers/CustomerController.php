@@ -3,11 +3,11 @@
 namespace App\Admin\Controllers;
 
 use App\Admin\Actions\Post\NumerologyCalculate;
+use App\Admin\Extensions\Tools\BatchUpdate;
 use App\Models\Customer;
 use App\Models\Indicator;
 use Encore\Admin\Facades\Admin;
 use Encore\Admin\Controllers\AdminController;
-use Encore\Admin\Auth\Database\Administrator;
 
 use Encore\Admin\Form;
 use Encore\Admin\Grid;
@@ -16,6 +16,7 @@ use Encore\Admin\Show;
 use Encore\Admin\Layout\Column;
 use Encore\Admin\Layout\Content;
 use Encore\Admin\Layout\Row;
+use Illuminate\Http\Request;
 
 class CustomerController extends AdminController
 {
@@ -43,9 +44,10 @@ class CustomerController extends AdminController
         $grid->column('dob', __('Ngày sinh'))->display(function () {
             return date('d-m-Y', strtotime($this->dob));
         })->hide();
-        $grid->column('map', __('LP'))->display(function ($map) {
-            return json_decode($this->map)[0]->number;
-        })->label();
+        $grid->column('life_path', __('LP'))->label();
+        // $grid->column('map', __('LP'))->display(function ($map) {
+        //     return json_decode($this->map)[0]->number;
+        // })->label();
         $grid->column('phone', __('Số điện thoại'))->hide();
         $grid->column('email', __('Email'))->hide();
         $grid->column('note', __('Ghi chú'))->hide();
@@ -57,17 +59,21 @@ class CustomerController extends AdminController
             $actions->add(new NumerologyCalculate);
         });
 
-        $grid->filter(function ($filter) {
+        $grid->tools(function ($tools) {
+            $tools->batch(function ($batch) {
+                $batch->disableDelete();
+                $batch->add('Batch Update', new BatchUpdate());
+            });
+        });
 
+        $grid->filter(function ($filter) {
             // Remove the default id filter
             $filter->disableIdFilter();
-
             // Add a column filter
             $filter->like('last_name', 'Họ và chữ lót');
             $filter->like('first_name', 'Tên');
         });
         return $grid;
-        
     }
 
     /**
@@ -118,7 +124,6 @@ class CustomerController extends AdminController
         
         $form->text('note', __('Ghi chú'));
 
-
         $form->hidden('life_path');
         $form->hidden('expression');
         $form->hidden('lpe_bridge');
@@ -143,27 +148,7 @@ class CustomerController extends AdminController
         
         $form->saved(function (Form $form) {;
             $cus = $form->model();
-            $cus->map = json_encode(Customer::calculateMap($form->model()));
-
-            $cus->life_path = Indicator::LifePathCalc($form->model());
-            $cus->expression = Indicator::ExpressionCalc($form->model());
-            $cus->lpe_bridge = abs(Indicator::totalIgnoreMaster($cus->life_path) - Indicator::totalIgnoreMaster($cus->expression));
-            $cus->heart_desire = Indicator::HeartDesireCalc($form->model());
-            $cus->personality = Indicator::PersonalityCalc($form->model());
-            $cus->hdp_bridge = abs(Indicator::totalIgnoreMaster($cus->heart_desire) - Indicator::totalIgnoreMaster($cus->personality));
-            $cus->balance = Indicator::BalanceCalc($form->model());
-            $cus->birthday = Indicator::BirthdayCalc($form->model());
-            $cus->maturity = Indicator::total($cus->life_path + $cus->expression);
-            $cus->karmic_lessons = Indicator::KarmicLessonsCalc($form->model());
-            $cus->rational_thought = Indicator::RationalThoughtCalc($form->model());
-            $cus->subconscious_confidence = 9 - sizeof($cus->karmic_lessons);
-            $cus->hidden_passion = Indicator::HiddenPassionCalc($form->model());
-            $cus->challennge = Indicator::ChallengeAndPinnacleCalc($form->model())['challenge'];
-            $cus->pinnacle = Indicator::ChallengeAndPinnacleCalc($form->model())['pinnacle'];
-            $cus->age = Indicator::ChallengeAndPinnacleCalc($form->model())['age'];
-            $cus->root = Indicator::ChallengeAndPinnacleCalc($form->model())['root'];
-            $cus->year = Indicator::YearAndMonthCalc($form->model());
-
+            $cus = Customer::calculateIndicators($form->model());
             $cus->save();
         });
 
@@ -198,5 +183,14 @@ class CustomerController extends AdminController
             );
     }
 
+  
     
+    public function updatePost(Request $request)
+    {
+        foreach (Customer::find($request->get('ids')) as $cus) {
+            $cus = Customer::calculateIndicators($cus);
+            $cus->save();
+        }
+    }
+
 }

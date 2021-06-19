@@ -18,4 +18,6 @@ Route::group([
     $router->resource('indicator-numbers', IndicatorNumberController::class);
     $router->get('showMap/{id}', 'CustomerController@showMap');
     $router->get('showDetail/{indicator}/{number}', 'IndicatorNumberController@showDetail');
+
+    $router->post('batch-update', 'CustomerController@updatePost');
 });

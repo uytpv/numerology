@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
 class Indicator extends Model
@@ -158,13 +159,14 @@ class Indicator extends Model
 
     public static function LifePathCalc($customer)
     {
-        $dateValue = strtotime($customer->dob);
+        $dateValue = Carbon::createFromFormat('d/m/Y', $customer->dob);
 
-        $yr = self::total(date('Y', $dateValue));
-        $mon = self::total(date('m', $dateValue));
-        $date = self::total(date('d', $dateValue));
+        $yr = self::total($dateValue->year);
+        $mon = self::total($dateValue->month);
+        $date = self::total($dateValue->day);
 
         $life_path = self::total($yr + $mon + $date);
+
         return $life_path;
     }
 
@@ -205,8 +207,8 @@ class Indicator extends Model
 
     public static function BirthdayCalc($customer)
     {
-        $dateValue = strtotime($customer->dob);
-        $date = self::total(date('d', $dateValue));
+        $dateValue = Carbon::createFromFormat('d/m/Y', $customer->dob);
+        $date = self::total($dateValue->day);
         return self::total($date);
     }
 
@@ -230,8 +232,8 @@ class Indicator extends Model
     {
         $fn = self::total(self::textToNumber(trim(self::convertViToEn($customer->first_name))));
 
-        $dateValue = strtotime($customer->dob);
-        $date = self::total(date('d', $dateValue));
+        $dateValue = Carbon::createFromFormat('d/m/Y', $customer->dob);
+        $date = self::total($dateValue->day);
 
         return self::total($fn + $date);
     }
@@ -259,11 +261,11 @@ class Indicator extends Model
 
     public static function ChallengeAndPinnacleCalc($customer)
     {
-        $dateValue = strtotime($customer->dob);
+        $dateValue = Carbon::createFromFormat('d/m/Y', $customer->dob);
 
-        $r_three = self::totalIgnoreMaster(date('Y', $dateValue)); // total số năm sinh
-        $r_one = self::totalIgnoreMaster(date('m', $dateValue)); // total số tháng sinh
-        $r_two = self::totalIgnoreMaster(date('d', $dateValue)); // total số ngày sinh
+        $r_three = self::totalIgnoreMaster($dateValue->year); // total số năm sinh
+        $r_one = self::totalIgnoreMaster($dateValue->month); // total số tháng sinh
+        $r_two = self::totalIgnoreMaster($dateValue->day); // total số ngày sinh
 
         $life_path = self::totalIgnoreMaster($r_three + $r_one + $r_two); // chỉ số đường đời này bỏ qua các số Master
 
@@ -276,7 +278,7 @@ class Indicator extends Model
         $p_two = self::totalIgnoreMaster($r_two + $r_three);
         $p_three = self::totalIgnoreMaster($p_one + $p_two);
         // duy nhất chặng cuối có thể có số master
-        $p_four = self::total(self::totalIgnoreMaster(date('m', $dateValue)) + self::totalIgnoreMaster(date('Y', $dateValue)));
+        $p_four = self::total(self::totalIgnoreMaster($dateValue->month) + self::totalIgnoreMaster($dateValue->year));
 
         $age_one = 36 - $life_path;
         $age_two = $age_one + 9;
@@ -295,11 +297,11 @@ class Indicator extends Model
 
     public static function YearAndMonthCalc($customer)
     {
-        $dateValue = strtotime($customer->dob);
+        $dateValue = Carbon::createFromFormat('d/m/Y', $customer->dob);
 
-        $month = self::total(date('m', $dateValue)); // total số tháng sinh
-        $date = self::total(date('d', $dateValue)); // total số ngày sinh
-        $this_year = self::total(date('Y'));
+        $month = self::total($dateValue->month); // total số tháng sinh
+        $date = self::total($dateValue->day); // total số ngày sinh
+        $this_year = self::total(Carbon::now()->year);
 
         $p_yrs_mon = [];
         for ($i = 0; $i < 9; $i++) {

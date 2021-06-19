@@ -38,6 +38,29 @@ class Customer extends Model
         'year'
     ];
 
+    public static function calculateIndicators($customer){
+        $customer->life_path = Indicator::LifePathCalc($customer);
+        $customer->expression = Indicator::ExpressionCalc($customer);
+        $customer->lpe_bridge = abs(Indicator::totalIgnoreMaster($customer->life_path) - Indicator::totalIgnoreMaster($customer->expression));
+        $customer->heart_desire = Indicator::HeartDesireCalc($customer);
+        $customer->personality = Indicator::PersonalityCalc($customer);
+        $customer->hdp_bridge = abs(Indicator::totalIgnoreMaster($customer->heart_desire) - Indicator::totalIgnoreMaster($customer->personality));
+        $customer->balance = Indicator::BalanceCalc($customer);
+        $customer->birthday = Indicator::BirthdayCalc($customer);
+        $customer->maturity = Indicator::total($customer->life_path + $customer->expression);
+        $customer->karmic_lessons = Indicator::KarmicLessonsCalc($customer);
+        $customer->rational_thought = Indicator::RationalThoughtCalc($customer);
+        $customer->subconscious_confidence = 9 - sizeof($customer->karmic_lessons);
+        $customer->hidden_passion = Indicator::HiddenPassionCalc($customer);
+        $customer->challennge = Indicator::ChallengeAndPinnacleCalc($customer)['challenge'];
+        $customer->pinnacle = Indicator::ChallengeAndPinnacleCalc($customer)['pinnacle'];
+        $customer->age = Indicator::ChallengeAndPinnacleCalc($customer)['age'];
+        $customer->root = Indicator::ChallengeAndPinnacleCalc($customer)['root'];
+        $customer->year = Indicator::YearAndMonthCalc($customer);
+        $customer->map = json_encode(Customer::calculateMap($customer));
+        return $customer;
+    }
+
 
     public static function calculateMap($customer)
     {
