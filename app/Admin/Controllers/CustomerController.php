@@ -75,6 +75,8 @@ class CustomerController extends AdminController
             $filter->like('last_name', 'Họ và chữ lót');
             $filter->like('first_name', 'Tên');
             $filter->in('life_path', 'Đường Đời')->multipleSelect(Indicator::getIndicatorWithMasterArr());
+            $filter->in('expression', 'Sứ Mệnh')->multipleSelect(Indicator::getIndicatorWithMasterArr());
+            $filter->in('heart_desire', 'Linh Hồn')->multipleSelect(Indicator::getIndicatorWithMasterArr());
         });
         return $grid;
     }

@@ -188,8 +188,13 @@ class Indicator extends Model
     public static function HeartDesireCalc($customer)
     {
         $fn = self::convertViToEn($customer->last_name) . ' ' . self::convertViToEn($customer->first_name);
-        $vowels = self::getVowelAndConsonant($fn)['vowel'];
-        return self::total(self::textToNumber($vowels));
+        $total_ln = 0;
+        $fnArr = explode(' ', $fn);
+        foreach ($fnArr as $index => $str) {
+            $vowels = self::getVowelAndConsonant($str)['vowel'];
+            $total_ln += self::total(self::textToNumber($vowels));
+        }
+        return self::total($total_ln);
     }
     public static function PersonalityCalc($customer)
     {
@@ -312,20 +317,20 @@ class Indicator extends Model
                 array_push($p_yrs_mon[$y], self::totalIgnoreMaster($y + ($j + 1)));
             }
         }
-        
+
         return $p_yrs_mon;
     }
 
     public static function getIndicatorWithMasterArr()
     {
         return [
-            1 => '1', 
-            2 => '2', 
-            3 => '3', 
-            4 => '4', 
-            5 => '5', 
-            6 => '6', 
-            7 => '7', 
+            1 => '1',
+            2 => '2',
+            3 => '3',
+            4 => '4',
+            5 => '5',
+            6 => '6',
+            7 => '7',
             8 => '8',
             9 => '9',
             11 => '11',
