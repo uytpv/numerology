@@ -3,8 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
-use App\Project;
-use App\Product;
 use Illuminate\Support\Facades\Request;
 
 class HomeController extends Controller
