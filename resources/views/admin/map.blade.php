@@ -237,7 +237,7 @@
         <div class="row">
             <div id="container">
                 {{-- {{ dd($map[16]) }} --}}
-                <h4 class="text-center indicator-name">Sơ Đồ Chặng | Thách Thức | 4 Đỉnh Cao Cuộc Đời <strong>({{ \Carbon\Carbon::createFromFormat('d/m/Y', $cus->dob)->diff(\Carbon\Carbon::now())->format('%y tuổi') }})</strong></h4>
+                <h4 class="text-center indicator-name">Sơ Đồ Chặng | Thách Thức | 4 Đỉnh Cao Cuộc Đời <strong>({{ \Carbon\Carbon::now()->format('Y') - \Carbon\Carbon::createFromFormat('d/m/Y', $cus->dob)->format('Y') }} tuổi)</strong></h4>
                 <div class="buildingBlock">
                     <a indicator="pinnacle"
                         number="{{ json_decode($cus->pinnacle)[3] }}"
