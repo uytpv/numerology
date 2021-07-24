@@ -123,25 +123,34 @@ class Indicator extends Model
             'vowel' => '',
             'consonant' => ''
         ];
-        foreach (str_split($str) as $index => $c) {
-            if (in_array($c, $vowels)) {
-                if ($c == 'y' || $c == 'Y') {
-                    if ($index == 0) {
-                        $s['vowel'] .= $c;
-                    } else {
-                        if (!in_array($str[$index - 1], $vowels)) {
-                            $s['vowel'] .= $c;
-                        } else {
+
+        /// Nếu chuoi có 1 ký tự và là chữ Y thì xác định là nguyên âm luôn
+        if (strlen($str)==1 && ($str == 'y' || $str == 'Y')) { 
+            $s['vowel'] .= $str;
+        /// ngược lại nếu len > 1 và ko phải Y thì kiểm tra tiếp
+        } else {
+            foreach (str_split($str) as $index => $c) {
+                if (in_array($c, $vowels)) {
+                    if ($c == 'y' || $c == 'Y') {
+                        if ($index == 0) {
                             $s['consonant'] .= $c;
+                        } else {
+                            if (!in_array($str[$index - 1], $vowels)) {
+                                $s['vowel'] .= $c;
+                            } else {
+                                $s['consonant'] .= $c;
+                            }
                         }
+                    } else {
+                        $s['vowel'] .= $c;
                     }
                 } else {
-                    $s['vowel'] .= $c;
+                    $s['consonant'] .= $c;
                 }
-            } else {
-                $s['consonant'] .= $c;
             }
         }
+
+        
         return $s;
     }
 
