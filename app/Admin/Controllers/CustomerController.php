@@ -44,9 +44,9 @@ class CustomerController extends AdminController
         $grid->column('dob', __('Ngày sinh'))->display(function () {
             return date('d-m-Y', strtotime($this->dob));
         })->hide();
-        $grid->column('life_path', __('ĐĐ'))->label();
-        $grid->column('expression', __('SM'))->label();
-        $grid->column('heart_desire', __('LH'))->label();
+        $grid->column('life_path', __('ĐĐ'))->label()->sortable();
+        $grid->column('expression', __('SM'))->label()->sortable();
+        $grid->column('heart_desire', __('LH'))->label()->sortable();
         // $grid->column('map', __('LP'))->display(function ($map) {
         //     return json_decode($this->map)[0]->number;
         // })->label();
@@ -77,6 +77,7 @@ class CustomerController extends AdminController
             $filter->in('life_path', 'Đường Đời')->multipleSelect(Indicator::getIndicatorWithMasterArr());
             $filter->in('expression', 'Sứ Mệnh')->multipleSelect(Indicator::getIndicatorWithMasterArr());
             $filter->in('heart_desire', 'Linh Hồn')->multipleSelect(Indicator::getIndicatorWithMasterArr());
+            $filter->like('note', 'Ghi chú');
         });
         return $grid;
     }
