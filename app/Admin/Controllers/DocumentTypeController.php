@@ -16,7 +16,7 @@ class DocumentTypeController extends AdminController
      *
      * @var string
      */
-    protected $title = 'DocumentType';
+    protected $title = 'Loại tài liệu';
 
     /**
      * Make a grid builder.

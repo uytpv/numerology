@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
 
 class CategoryController extends AdminController
 {
-    protected $title = 'Thể loại tài liệu';
+    protected $title = 'Phân nhóm tài liệu';
 
     /**
      * Index interface.
@@ -43,15 +43,8 @@ class CategoryController extends AdminController
     protected function form()
     {
         $form = new Form(new Category());
-
-        $form->display('id', 'ID');
-
         $form->select('parent_id')->options(Category::selectOptions());
-
         $form->text('title')->rules('required');
-
-        $form->display('created_at', 'Created At');
-        $form->display('updated_at', 'Updated At');
 
         return $form;
     }
