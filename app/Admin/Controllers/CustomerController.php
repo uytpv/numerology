@@ -48,6 +48,8 @@ class CustomerController extends AdminController
         $grid->column('expression', __('SM'))->label()->sortable();
         $grid->column('heart_desire', __('LH'))->label()->sortable();
         $grid->column('subconscious_confidence', __('SMTT'))->label()->sortable();
+        $grid->column('balance', __('CB'))->label()->sortable()->hide();
+        $grid->column('rational_thought', __('TDLT'))->label()->sortable()->hide();
         // $grid->column('map', __('LP'))->display(function ($map) {
         //     return json_decode($this->map)[0]->number;
         // })->label();
