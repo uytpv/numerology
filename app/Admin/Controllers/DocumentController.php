@@ -77,7 +77,11 @@ class DocumentController extends AdminController
             $filter->in('cate_id', 'Nhóm tài liệu')->multipleSelect(Category::all()->pluck('title', 'id'));
             $filter->in('type_id', 'Loại tài liệu')->multipleSelect(DocumentType::all()->pluck('title', 'id'));
         });
-
+        $grid->actions(function ($actions) {
+            if(!Admin::user()->isRole('administrator')){
+                $actions->disableDelete();
+            }
+        });
         return $grid;
     }
 

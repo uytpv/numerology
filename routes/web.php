@@ -17,7 +17,11 @@ use Illuminate\Routing\Router;
 Route::group([
 ], function (Router $router) {
 
+    //GET
     $router->get('/', 'HomeController@index');
+    $router->get('/pages/{page_name}', 'StaticPageController@index');
+    
+    //POST
     $router->post('/', 'HomeController@showMap');
     // $router->get('showDetail/{indicator}/{number}', 'IndicatorNumberController@showDetail');
 });

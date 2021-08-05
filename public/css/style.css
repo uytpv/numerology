@@ -7,9 +7,10 @@ body {
 }
 
 .card {
-    padding: 20px;
-    margin: 20px;
+    padding: 10px;
+    margin: 10px;
     background-color: #ddd;
+    border-radius: 4%;
 }
 
 .card .card-title {

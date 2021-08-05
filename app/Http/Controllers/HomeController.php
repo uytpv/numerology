@@ -26,7 +26,8 @@ class HomeController extends Controller
         $customer->admin_id = 0;
         $customer->save();
         return view('home')->with([
-            'map' => json_decode($customer->map)
+            'map' => json_decode($customer->map),
+            'customer' => $customer
         ]);
     }
 }
