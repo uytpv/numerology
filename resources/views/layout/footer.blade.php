@@ -24,7 +24,7 @@
     <div class="alo-ph-img-circle hotline-color">
         <i class="glyphicon glyphicon-earphone"></i>
     </div>
-    <span class="alo-ph-text hotline-content hotline-color">Call</span>
+    <span class="alo-ph-text hotline-content hotline-color">0932062322</span>
 </a>
 <!-- Make a Call End -->
 @endif
