@@ -26,7 +26,7 @@ use App\Models\Indicator;
                                     <div class="col-lg-4 info mt-4 mt-lg-0">
                                         
                                         <h4><i class="fa fa-mobile"></i> Call:</h4>
-                                        <p>+84 937 322 722 <br>+84 932 062 322</p>
+                                        <p>+84 932 062 322</p>
                                     </div>
                                 </div>
                             </div>
