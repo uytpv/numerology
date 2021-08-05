@@ -31,9 +31,9 @@ class DocumentController extends AdminController
         $grid = new Grid(new Document());
         $grid->column('title', __('Tên tài liệu'));
         $grid->column('link', __('Link'))->display(function () {
-            return '<a href="' . $this->link . '" target=_blank>' . $this->link . '</a>';
-        });
-        $grid->column('type_id', __('Loại tài liệu'))->display(function () {
+            return '<a href="' . $this->link . '" target="_blank" style="overflow-wrap: anywhere;">' . $this->link . '</a>';
+        })->setAttributes(['width' => ' 300px']);
+        $grid->column('type_id', __('Loại'))->display(function () {
 
             $type = DocumentType::where('id', $this->type_id)->first()->title;
             switch ($type) {
@@ -53,7 +53,7 @@ class DocumentController extends AdminController
         $grid->column(__('Nhóm cha'))->display(function () {
             $pid = Category::where('id', $this->cate_id)->first()->parent_id;
             return Category::where('id', $pid)->first()->title;
-        });
+        })->hide();
         $grid->column('cate_id', __('Nhóm tài liệu'))->display(function () {
             return Category::where('id', $this->cate_id)->first()->title;
         })->sortable();
@@ -63,7 +63,7 @@ class DocumentController extends AdminController
             return Administrator::where('id', $this->admin_id)->first()->name;
         });
 
-        $grid->column('note', __('Ghi chú'));
+        $grid->column('note', __('Ghi chú'))->hide();
         $grid->column('created_at', __('Created at'))->hide();
         $grid->column('updated_at', __('Updated at'))->hide();
 
