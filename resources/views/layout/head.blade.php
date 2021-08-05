@@ -8,6 +8,7 @@
 	<link rel="icon" type="image/png" href="{{ env('APP_URL') }}/vendor/free-css-sports/favicons/favicon-16x16.png" sizes="16x16">
 	<link rel="stylesheet" href="{{ env('APP_URL') }}/vendor/free-css-sports/css/bootstrap.css">
 	<link rel="stylesheet" href="{{ env('APP_URL') }}/vendor/free-css-sports/fonts/font-awesome-4.3.0/css/font-awesome.min.css">
+	<link rel="stylesheet" href="{{ env('APP_URL') }}/css/floating-hotline-with-number.css">
 
     <link rel="stylesheet" href="{{ env('APP_URL') }}/vendor/free-css-sports/css/all.css?v=20210805">
     <link rel="stylesheet" href="{{ env('APP_URL') }}/css/style.css?v=20210805">

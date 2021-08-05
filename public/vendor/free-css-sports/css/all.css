@@ -907,7 +907,7 @@ a:hover {
     top: 0;
     right: 15px;
     left: 15px;
-    background: #f4f4f4;
+    /* background: #f4f4f4; */
 }
 
 .footer-holder .logo {
