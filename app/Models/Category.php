@@ -15,7 +15,7 @@ class Category extends Model
     {
         parent::__construct($attributes);
 
-        $this->setParentColumn('parent_id');
+        $this->setParentColumn('category_id');
         $this->setOrderColumn('order');
         $this->setTitleColumn('title');
     }
@@ -35,10 +35,5 @@ class Category extends Model
     ];
 
     protected $guarded = [];
-    /**
-     * API for getting all category
-     * @param Request $request
-     * @return
-     */
-    
+       
 }

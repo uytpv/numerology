@@ -43,7 +43,7 @@ class CategoryController extends AdminController
     protected function form()
     {
         $form = new Form(new Category());
-        $form->select('parent_id')->options(Category::selectOptions());
+        $form->select('category_id')->options(Category::selectOptions());
         $form->text('title')->rules('required');
 
         return $form;
@@ -52,7 +52,7 @@ class CategoryController extends AdminController
     public function categories(Request $request)
     {
         $q = $request->get('q');
-        return Category::where('title', 'like', "%$q%")->where('parent_id', '>', 0)->paginate(null, ['id', 'title as text']);
+        return Category::where('title', 'like', "%$q%")->where('category_id', '>', 0)->paginate(null, ['id', 'title as text']);
     }
 
     /**
@@ -63,6 +63,6 @@ class CategoryController extends AdminController
     public function parentCategories(Request $request)
     {
         $q = $request->get('q');
-        return Category::where('parent_id', '=', 0)->where('title', 'like', "%$q%")->paginate(null, ['id', 'title as text']);
+        return Category::where('category_id', '=', 0)->where('title', 'like', "%$q%")->paginate(null, ['id', 'title as text']);
     }
 }

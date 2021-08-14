@@ -41,9 +41,7 @@ class CustomerController extends AdminController
 
         $grid->column('last_name', __('Họ và chữ lót'));
         $grid->column('first_name', __('Tên'));
-        $grid->column('dob', __('Ngày sinh'))->display(function () {
-            return date('d-m-Y', strtotime($this->dob));
-        })->hide();
+        $grid->column('dob', __('Ngày sinh'))->hide();
         $grid->column('life_path', __('ĐĐ'))->label()->sortable();
         $grid->column('expression', __('SM'))->label()->sortable();
         $grid->column('heart_desire', __('LH'))->label()->sortable();

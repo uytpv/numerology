@@ -3,14 +3,15 @@
 namespace App\Admin\Controllers;
 
 use App\Models\Category;
+use Encore\Admin\Auth\Database\Administrator;
 use App\Models\Document;
 use App\Models\DocumentType;
-use Encore\Admin\Auth\Database\Administrator;
 use Encore\Admin\Controllers\AdminController;
 use Encore\Admin\Form;
 use Encore\Admin\Grid;
 use Encore\Admin\Show;
 use Encore\Admin\Facades\Admin;
+use Illuminate\Http\Request;
 
 class DocumentController extends AdminController
 {
@@ -29,6 +30,7 @@ class DocumentController extends AdminController
     protected function grid()
     {
         $grid = new Grid(new Document());
+
         $grid->column('title', __('Tên tài liệu'));
         $grid->column('link', __('Link'))->display(function () {
             return '<a href="' . $this->link . '" target="_blank" style="overflow-wrap: anywhere;">' . $this->link . '</a>';
@@ -52,7 +54,7 @@ class DocumentController extends AdminController
         })->sortable();
         $grid->column(__('Nhóm cha'))->display(function () {
             $pid = Category::where('id', $this->cate_id)->first()->parent_id;
-            return Category::where('id', $pid)->first()->title;
+            return Category::where('id', $pid)->first()->title ??'' ;
         })->hide();
         $grid->column('cate_id', __('Nhóm tài liệu'))->display(function () {
             return Category::where('id', $this->cate_id)->first()->title;
@@ -133,4 +135,6 @@ class DocumentController extends AdminController
         $form->text('note', __('Ghi chú'));
         return $form;
     }
+
+    
 }
