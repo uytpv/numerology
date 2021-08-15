@@ -20,6 +20,7 @@
                     <li><a href="{{ env('APP_URL') }}/pages/nang-luong-cua-cac-con-so">Năng lượng con số</a></li>
                     <li><a href="{{ env('APP_URL') }}/pages/cac-chi-so">Các chỉ số</a></li>
                     <li><a href="{{ env('APP_URL') }}/pages/lien-he">Liên hệ</a></li>
+                    <li><a href="{{ env('APP_URL') }}/pages/banh-xe-cuoc-doi">BXCĐ</a></li>
                 </ul>
                 <div class="drop-holder visible-sm visible-xs">
                     <span>Follow Us</span>
