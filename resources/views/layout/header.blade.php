@@ -12,7 +12,7 @@
             <div class="opener-holder">
                 <a href="#" class="nav-opener"><span></span></a>
             </div>
-            <a href="{{ env('APP_URL') }}" class="btn btn-primary rounded">Xem bản đồ</a>
+            {{-- <a href="{{ env('APP_URL') }}" class="btn btn-primary rounded">Xem bản đồ</a> --}}
             <div class="nav-drop">
                 <ul>
                     <li class="active visible-sm visible-xs"><a href="{{ env('APP_URL') }}">Trang chủ</a></li>
