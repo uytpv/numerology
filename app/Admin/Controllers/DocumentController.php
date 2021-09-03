@@ -124,14 +124,14 @@ class DocumentController extends AdminController
             if ($cate) {
                 return [$cate->id => $cate->title];
             }
-        })->ajax('/admin/api/categories');
+        })->ajax('/admin/api/categories')->rules('required');
 
-        $form->select('type_id', __('Loại tài liệu'))->options(DocumentType::all()->pluck('title', 'id'));
+        $form->select('type_id', __('Loại tài liệu'))->options(DocumentType::all()->pluck('title', 'id'))->rules('required');
 
         $form->hidden('admin_id')->value(Admin::user()->id);
 
-        $form->text('title', __('Tên tài liệu'));
-        $form->url('link', __('Link'));
+        $form->text('title', __('Tên tài liệu'))->rules('required');
+        $form->url('link', __('Link'))->rules('required');
         $form->text('note', __('Ghi chú'));
         return $form;
     }
