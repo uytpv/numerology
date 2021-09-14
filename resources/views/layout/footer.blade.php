@@ -5,7 +5,7 @@ $url = request()
 ?>
 @if (strpos($url, 'lien-he') !== 0)
     <!-- Footer Section Start -->
-    <footer id="footer">
+    {{-- <footer id="footer">
         <div class="container">
             <div class="footer-holder">
                 <div class="row">
@@ -16,7 +16,7 @@ $url = request()
                 </div>
             </div>
         </div>
-    </footer>
+    </footer> --}}
     <!-- Footer Section End -->
 
     <!-- Make a Call -->

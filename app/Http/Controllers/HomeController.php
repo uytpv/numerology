@@ -14,14 +14,14 @@ class HomeController extends Controller
 
     public function showMap(Request $request)
     {
-        // dd(explode('/', $_POST['dob']));
+        // dd($_POST['dob']);
         $fullname = $_POST['fullname'];
         $arrName = explode(" ", $fullname);
 
         $customer = new Customer();
         $customer->first_name = array_pop($arrName);
         $customer->last_name =  implode(" ", $arrName);
-        $customer->dob = $_POST['dob'];
+        $customer->dob = $_POST['dob'] == "" ? "1/1/1970" : $_POST['dob'];
         $customer->map = json_encode(Customer::calculateMap($customer));
         $customer->admin_id = 0;
         $customer->save();

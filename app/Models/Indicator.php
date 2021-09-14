@@ -166,7 +166,7 @@ class Indicator extends Model
         return $s;
     }
 
-    public static function LifePathCalc($customer)
+    public static function LifePathCalc($customer) // duong doi
     {
         $dateValue = Carbon::createFromFormat('d/m/Y', $customer->dob);
 
@@ -179,7 +179,7 @@ class Indicator extends Model
         return $life_path;
     }
 
-    public static function ExpressionCalc($customer)
+    public static function ExpressionCalc($customer) // su mệnh
     {
         // dd(self::convertViToEn($customer->last_name));
         $fn = self::total(self::textToNumber(trim(self::convertViToEn($customer->first_name))));
@@ -194,7 +194,7 @@ class Indicator extends Model
         return $total;
     }
 
-    public static function HeartDesireCalc($customer)
+    public static function HeartDesireCalc($customer) 
     {
         $fn = self::convertViToEn($customer->last_name) . ' ' . self::convertViToEn($customer->first_name);
         $total_ln = 0;
