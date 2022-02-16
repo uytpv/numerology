@@ -118,7 +118,7 @@ class Indicator extends Model
 
     static function getVowelAndConsonant($str)
     {
-        $vowels = ['a', 'e', 'i', 'j', 'o', 'u', 'y', 'A', 'E', 'I', 'J', 'O', 'U', 'Y'];
+        $vowels = ['a', 'e', 'i', 'o', 'u', 'y', 'A', 'E', 'I', 'O', 'U', 'Y'];
         $s = [
             'vowel' => '',
             'consonant' => ''
