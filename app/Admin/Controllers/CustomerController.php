@@ -56,10 +56,17 @@ class CustomerController extends AdminController
         $grid->column('note', __('Ghi chú'))->hide();
         $grid->column('created_at', __('Created at'))->hide();
         $grid->column('updated_at', __('Updated at'))->hide();
+        $grid->column('Xuất MAP')->display(function () {
+
+            return '<a href="' . env('APP_URL') . '/admin/showMap/' . $this->getKey() . '" class="btn btn-sm btn-info" title="Show Map">
+            <i class="fa fa-download"></i><span class="hidden-xs">&nbsp;&nbsp;Xuất MAP</span>
+        </a>';
+            // return '/admin/showMap/' . $this->getKey();
+        });
 
         $grid->actions(function ($actions) {
             $actions->disableView();
-            $actions->add(new NumerologyCalculate);
+            // $actions->add(new NumerologyCalculate);
         });
 
         $grid->tools(function ($tools) {
