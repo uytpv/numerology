@@ -178,7 +178,7 @@ class Indicator extends Model
         return $life_path;
     }
 
-    public static function ExpressionCalc($customer) // su mệnh
+    public static function ExpressionCalc($customer) // sứ mệnh
     {
         // dd(self::convertViToEn($customer->last_name));
         $fn = self::total(self::textToNumber(trim(self::convertViToEn($customer->first_name))));
@@ -193,34 +193,41 @@ class Indicator extends Model
         return $total;
     }
 
-    public static function HeartDesireCalc($customer)
+    public static function HeartDesireCalc($customer) // Linh hồn
     {
         $fn = self::convertViToEn($customer->last_name) . ' ' . self::convertViToEn($customer->first_name);
-        $vowels = self::getVowelAndConsonant($fn)['vowel'];
+        $vowels = '';
+        foreach (explode(' ', $fn) as $w) {
+            $vowels .= self::getVowelAndConsonant($w)['vowel'];
+        }
         return self::total(self::textToNumber($vowels));
     }
-    public static function PersonalityCalc($customer)
+    public static function PersonalityCalc($customer) // Nhân cách
     {
         $fn = self::convertViToEn($customer->last_name) . ' ' . self::convertViToEn($customer->first_name);
-        $consonant = self::getVowelAndConsonant($fn)['consonant'];
+        $consonant = '';
+        foreach (explode(' ', $fn) as $w) {
+            $consonant .= self::getVowelAndConsonant($w)['consonant'];
+        }
+        
         return self::total(self::textToNumber($consonant));
     }
 
-    public static function BalanceCalc($customer)
+    public static function BalanceCalc($customer) // Cân bằng
     {
         $fn = self::convertViToEn($customer->last_name) . ' ' . self::convertViToEn($customer->first_name);
         $first_of_word = self::getFirstOfWord($fn);
         return self::total(self::textToNumber($first_of_word));
     }
 
-    public static function BirthdayCalc($customer)
+    public static function BirthdayCalc($customer) // Ngày sinh
     {
         $dateValue = Carbon::createFromFormat('d/m/Y', $customer->dob);
         $date = self::total($dateValue->day);
         return self::total($date);
     }
 
-    public static function KarmicLessonsCalc($customer)
+    public static function KarmicLessonsCalc($customer) // Chỉ ssố thiếu
     {
         $fn = self::textToNumber(trim(self::convertViToEn($customer->first_name)));
         $ln = explode(' ', trim(self::convertViToEn($customer->last_name))); // array
@@ -236,7 +243,7 @@ class Indicator extends Model
         return $kl;
     }
 
-    public static function RationalThoughtCalc($customer)
+    public static function RationalThoughtCalc($customer) // Tư duy lý trí
     {
         $fn = self::total(self::textToNumber(trim(self::convertViToEn($customer->first_name))));
 
@@ -246,7 +253,7 @@ class Indicator extends Model
         return self::total($fn + $date);
     }
 
-    public static function HiddenPassionCalc($customer)
+    public static function HiddenPassionCalc($customer) // Đam mê tiềm ẩn
     {
         $fn = self::textToNumber(trim(self::convertViToEn($customer->first_name)));
         $ln = explode(' ', trim(self::convertViToEn($customer->last_name))); // array
@@ -267,7 +274,7 @@ class Indicator extends Model
         return $hp;
     }
 
-    public static function ChallengeAndPinnacleCalc($customer)
+    public static function ChallengeAndPinnacleCalc($customer) // Thách thức và Chặng
     {
         $dateValue = Carbon::createFromFormat('d/m/Y', $customer->dob);
 
@@ -303,7 +310,7 @@ class Indicator extends Model
         return $cp;
     }
 
-    public static function YearAndMonthCalc($customer)
+    public static function YearAndMonthCalc($customer) // Năm cá nhân và tháng cá nhân
     {
         $dateValue = Carbon::createFromFormat('d/m/Y', $customer->dob);
 
