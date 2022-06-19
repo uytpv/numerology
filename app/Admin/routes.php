@@ -15,6 +15,7 @@ Route::group([
     $router->get('showMap/{id}', 'CustomerController@showMap');
     $router->get('showDetail/{indicator}/{number}', 'IndicatorNumberController@showDetail');
     $router->get('documents', 'NDocumentController@index');
+    $router->get('statistic', 'StatisticController@index');
     
     //RESOURCE
     $router->resource('customers', CustomerController::class);

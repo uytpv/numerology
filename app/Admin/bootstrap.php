@@ -20,5 +20,7 @@
 
 Encore\Admin\Form::forget(['map', 'editor']);
 
-Admin::css(env('APP_URL').'/css/style.css');
+Admin::css(env('APP_URL') . '/css/style.css');
 
+Admin::js(env('APP_URL') . '/vendor/chartjs/dist/chart.min.js');
+Admin::js(env('APP_URL') . '/vendor/chartjs-plugin-datalabels/dist/chartjs-plugin-datalabels.min.js');
