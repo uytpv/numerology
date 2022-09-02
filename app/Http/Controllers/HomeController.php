@@ -15,7 +15,7 @@ class HomeController extends Controller
     public function showMap(Request $request)
     {
         // dd($_POST['dob']);
-        $fullname = $_POST['fullname'];
+        $fullname = trim($_POST['fullname']);
         $arrName = explode(" ", $fullname);
 
         $customer = new Customer();
