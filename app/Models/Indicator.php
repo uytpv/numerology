@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Indicator extends Model
 {
     protected $table = 'indicators';
-    protected $fillable = ['name', 'code', 'eng_name', 'guide', 'short_description', 'description', 'created_at', 'updated_at'];
+    protected $fillable = ['name', 'code', 'eng_name', 'image', 'guide', 'short_description', 'description', 'created_at', 'updated_at'];
 
     static function total($s)
     {
@@ -209,7 +209,7 @@ class Indicator extends Model
         foreach (explode(' ', $fn) as $w) {
             $consonant .= self::getVowelAndConsonant($w)['consonant'];
         }
-        
+
         return self::total(self::textToNumber($consonant));
     }
 

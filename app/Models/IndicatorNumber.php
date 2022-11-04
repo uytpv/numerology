@@ -6,10 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * @property int $id
- * @property string $name
- * @property string $phone
- * @property string $email
- * @property string $dob
+ * @property string $indicator
+ * @property string $number
+ * @property string $short_description
+ * @property string $description
  * @property string $created_at
  * @property string $updated_at
  */

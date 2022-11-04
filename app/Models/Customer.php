@@ -17,7 +17,7 @@ class Customer extends Model
 {
     protected $table = 'customers';
     protected $fillable = [
-        'fist_name', 'last_name', 'phone', 'email', 'dob', 'map', 'admin_id', 'note', 'created_at', 'updated_at',
+        'first_name', 'last_name', 'phone', 'email', 'dob', 'map', 'admin_id', 'note', 'created_at', 'updated_at',
         'life_path',
         'expression',
         'lpe_bridge',
@@ -38,7 +38,8 @@ class Customer extends Model
         'year'
     ];
 
-    public static function calculateIndicators($customer){
+    public static function calculateIndicators($customer)
+    {
         $customer->life_path = Indicator::LifePathCalc($customer);
         $customer->expression = Indicator::ExpressionCalc($customer);
         $customer->lpe_bridge = abs(Indicator::totalIgnoreMaster($customer->life_path) - Indicator::totalIgnoreMaster($customer->expression));

@@ -27,7 +27,10 @@ class IndicatorController extends AdminController
     protected function grid()
     {
         $grid = new Grid(new Indicator());
-
+        $grid->column('image', __('Image'))->display(function ($image) {
+            $ext = substr($image, - (strlen($image) - strpos($image, '.') - 1));
+            return '<img src="' . env('APP_URL') . '/uploads/' . rtrim($image, '.' . $ext) . '-small.' . $ext . '" class="img img-thumbnail">';
+        })->width(300);
         $grid->column('name', __('Chỉ số'))->width(300)->modal('Ý NGHĨA CHỈ SỐ', function ($data) {
             return view('admin/indicator', [
                 'data' => $data
@@ -102,7 +105,7 @@ class IndicatorController extends AdminController
         $form->ckeditor('description', __('Mô tả ý nghĩa'))->options(['lang' => 'en', 'height' => 300])->rules('required', [
             'required' => 'Bắt buộc nhập'
         ]);
-
+        $form->image('image', __('Image'))->thumbnail('small', $width = 200, $height = 200)->uniqueName();
         $form->disableEditingCheck();
         $form->disableCreatingCheck();
         $form->disableViewCheck();
