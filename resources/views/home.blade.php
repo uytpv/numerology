@@ -64,8 +64,8 @@ use App\Models\Indicator;
                         <div class="card text-center">
                             <div class="card-body">
                                 <h5 class="card-title">
-                                    {{ Indicator::where(['code' => $map[3]->indicator])->first()->name }}</h5>
-                                <div class="badge rounded-pill badge-outline-warning">{{ $map[3]->number }}</div>
+                                    {{ Indicator::where(['code' => $map[1]->indicator])->first()->name }}</h5>
+                                <div class="badge rounded-pill badge-outline-warning">{{ $map[1]->number }}</div>
                             </div>
                         </div>
                     </div>
@@ -73,9 +73,9 @@ use App\Models\Indicator;
                         <div class="card text-center">
                             <div class="card-body">
                                 <h5 class="card-title">
-                                    {{ Indicator::where(['code' => $map[6]->indicator])->first()->name }}
+                                    {{ Indicator::where(['code' => $map[2]->indicator])->first()->name }}
                                 </h5>
-                                <div class="badge rounded-pill badge-outline-warning">{{ $map[6]->number }}</div>
+                                <div class="badge rounded-pill badge-outline-warning">{{ $map[2]->number }}</div>
                             </div>
                         </div>
                     </div>
@@ -83,8 +83,8 @@ use App\Models\Indicator;
                         <div class="card text-center">
                             <div class="card-body">
                                 <h5 class="card-title">
-                                    {{ Indicator::where(['code' => $map[10]->indicator])->first()->name }}</h5>
-                                <div class="badge rounded-pill badge-outline-warning">{{ $map[10]->number }}</div>
+                                    {{ Indicator::where(['code' => $map[3]->indicator])->first()->name }}</h5>
+                                <div class="badge rounded-pill badge-outline-warning">{{ $map[3]->number }}</div>
                             </div>
                         </div>
                     </div>
