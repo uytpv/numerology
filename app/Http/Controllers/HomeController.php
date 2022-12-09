@@ -9,6 +9,11 @@ class HomeController extends Controller
 {
     public function index()
     {
+        return view('uxos/index')->with([]);
+    }
+
+    public function HomePage()
+    {
         return view('home')->with([]);
     }
 
@@ -17,7 +22,7 @@ class HomeController extends Controller
         // dd($_POST['dob']);
         $fullname = trim($_POST['fullname']);
         $arrName = explode(" ", $fullname);
-
+        
         $customer = new Customer();
         $customer->first_name = array_pop($arrName);
         $customer->last_name =  implode(" ", $arrName);
