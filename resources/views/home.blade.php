@@ -13,13 +13,13 @@ use App\Models\Indicator;
                 {{ csrf_field() }}
                 <div class="form-group">
                     <label for="email">Họ tên đầy đủ</label>
-                    <input class="form-control input-lg" type="text" name="fullname" id="email" placeholder="Họ tên đầy đủ"
-                        required />
+                    <input class="form-control input-lg" type="text" name="fullname" id="email"
+                        placeholder="Họ tên đầy đủ" required />
                 </div>
                 <div class="form-group">
                     <label for="password">Ngày Sinh đầy đủ</label>
-                    <input type="text" pattern="\d{1,2}/\d{1,2}/\d{4}" class="datepicker form-control input-lg" name="dob"
-                        placeholder="dd/mm/yyyy" />
+                    <input type="text" pattern="\d{1,2}/\d{1,2}/\d{4}" class="datepicker form-control input-lg"
+                        name="dob" placeholder="dd/mm/yyyy" />
 
                 </div>
                 <div class="form-group">
@@ -39,7 +39,6 @@ use App\Models\Indicator;
     @endisset
 
     @isset($map)
-
         <div class="row justify-content-md-center">
             <div class="container" style="margin:0 auto; position: relative">
                 @if ($customer->dob === '01/01/1970')
@@ -69,16 +68,6 @@ use App\Models\Indicator;
                             </div>
                         </div>
                     </div>
-                    <div class="col-sm-3 ">
-                        <div class="card text-center">
-                            <div class="card-body">
-                                <h5 class="card-title">
-                                    {{ Indicator::where(['code' => $map[2]->indicator])->first()->name }}
-                                </h5>
-                                <div class="badge rounded-pill badge-outline-warning">{{ $map[2]->number }}</div>
-                            </div>
-                        </div>
-                    </div>
                     <div class="col-sm-3">
                         <div class="card text-center">
                             <div class="card-body">
@@ -88,10 +77,22 @@ use App\Models\Indicator;
                             </div>
                         </div>
                     </div>
+                    <div class="col-sm-3 ">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    {{ Indicator::where(['code' => $map[17]->indicator])->first()->name }}
+                                </h5>
+                                <div class="badge rounded-pill badge-outline-warning">
+                                    {{-- Đoạn này lấy tạm để hiển thị Năm Cá Nhân --}}
+                                    {{ key($map[17]->number) }} 
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 @endif
             </div>
         </div>
-
     @endisset
 
 @endsection
