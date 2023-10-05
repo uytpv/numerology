@@ -29,7 +29,7 @@ class HomeController extends Controller
         $customer->dob = $_POST['dob'] == "" ? "1/1/1970" : $_POST['dob'];
         $customer->map = json_encode(Customer::calculateMap($customer));
         $customer->admin_id = 0;
-        $customer->save();
+        // $customer->save(); // không lưu database để tránh dữ liệu rác
         return view('home')->with([
             'map' => json_decode($customer->map),
             'customer' => $customer
