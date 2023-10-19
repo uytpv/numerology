@@ -23,8 +23,12 @@ Route::group([
     $router->get('/trang-chu', 'HomeController@HomePage');
     $router->get('/pages/{page_name}', 'StaticPageController@index');
     
+    $router->get('/gjw', 'GJWController@index');
+    
     //POST
     $router->post('/', 'HomeController@showMap'); // thêm tạm POST cho trang cũ để chạy sự kiện 10/12/2022
     $router->post('/trang-chu', 'HomeController@showMap');
     // $router->get('showDetail/{indicator}/{number}', 'IndicatorNumberController@showDetail');
+
+
 });
