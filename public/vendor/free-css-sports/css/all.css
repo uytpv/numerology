@@ -483,7 +483,9 @@ a:hover {
 }
 
 .visual-list li {
-    padding: 0 0 29px;
+    text-align: justify;
+    padding: 0 0 10px;
+    font-size: 1.8rem;
 }
 
 .visual-list h3 {
@@ -495,7 +497,7 @@ a:hover {
 }
 
 .visual-list p {
-    margin: 0 0 21px;
+    margin: 0 0 10px;
 }
 
 .cycle-gallery {
