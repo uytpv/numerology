@@ -25,7 +25,8 @@ Route::group([
     $router->resource('categories', CategoryController::class);
     $router->resource('document-types', DocumentTypeController::class);
     $router->resource('ndocuments', DocumentController::class);
-    $router->resource('users', UserController::class);
+    //override route quản lý danh sách admin đến custom UserController override
+    $router->resource('auth/users', UserController::class);
 
     //POST
     $router->post('customers/batch-update', 'CustomerController@updatePost');
