@@ -21,16 +21,14 @@ class UserController extends EncoreUserController
             $filter->like('name', 'Tìm theo Tên');
             $filter->like('username', 'Tìm theo Username');
 
-            // // Sử dụng callback để thêm filter theo roles
-            // $filter->where(function ($query) use ($filter) {
-            //     // Lọc dựa trên tên của vai trò từ bảng roles
-            //     $query->whereHas('roles', function ($q) {
-            //         $q->where('name', 'equal', '%{$this->input}%');
-            //     });
-            // }, 'Vai trò')->select(Role::all()->pluck('id')->label('name'));
+            $filter->where(function ($q) {
+                $role_id = $this->input;
+                // Sử dụng hàm `whereIn` để tìm kiếm người dùng dựa trên role IDs
+                $q->whereIn('id', function ($query) use ($role_id) {
+                    $query->select('user_id')->from('admin_role_users')->where('role_id', $role_id);
+                });
+            }, 'Role')->select(Role::all()->pluck('name', 'id'));
         });
-
-
         return $grid;
     }
     public function form()
