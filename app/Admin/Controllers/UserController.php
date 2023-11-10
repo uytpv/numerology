@@ -12,7 +12,7 @@ class UserController extends EncoreUserController
         $grid = parent::grid();
 
         $grid->model()->orderBy('id', 'desc');
-        $grid->column('parent_id', 'Tuyến trên');
+        // $grid->column('parent_id', 'Tuyến trên');
 
         $grid->filter(function ($filter) {
             // Remove the default id filter
@@ -34,7 +34,7 @@ class UserController extends EncoreUserController
     public function form()
     {
         $f = parent::form();
-        $f->text('parent_id');
+        // $f->text('parent_id');
         return $f;
     }
 }
