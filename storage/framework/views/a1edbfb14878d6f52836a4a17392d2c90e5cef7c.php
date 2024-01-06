@@ -53,27 +53,26 @@ use App\Models\Indicator;
                         </h5>
                     </div>
                 <?php else: ?>
-                    <!--div class="col-sm-3">
-                                        <div class="card text-center">
-                                            <div class="card-body">
-                                                <h5 class="card-title">
-                                                    <?php echo e(Indicator::where(['code' => $map[0]->indicator])->first()->name, false); ?></h5>
-                                                <div class="badge rounded-pill badge-outline-warning"><?php echo e($map[0]->number, false); ?></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div-- class="col-sm-3">
-                                        <div class="card text-center">
-                                            <div class="card-body">
-                                                <h5 class="card-title">
-                                                    <?php echo e(Indicator::where(['code' => $map[1]->indicator])->first()->name, false); ?></h5>
-                                                <div class="badge rounded-pill badge-outline-warning"><?php echo e($map[1]->number, false); ?></div>
-                                            </div>
-                                        </div>
-                                    </div-->
-                    <div class="col-sm-4">
+                    <div class="col-sm-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <?php echo e(Indicator::where(['code' => $map[0]->indicator])->first()->name, false); ?></h5>
+                                <div class="badge rounded-pill badge-outline-warning"><?php echo e($map[0]->number, false); ?></div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-sm-4">
+                    <div class="col-sm-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <?php echo e(Indicator::where(['code' => $map[1]->indicator])->first()->name, false); ?></h5>
+                                <div class="badge rounded-pill badge-outline-warning"><?php echo e($map[1]->number, false); ?></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-sm-3">
                         <div class="card text-center">
                             <div class="card-body">
                                 <h5 class="card-title">
@@ -82,23 +81,22 @@ use App\Models\Indicator;
                             </div>
                         </div>
                     </div>
-                    <div class="col-sm-4">
+
+                    <div class="col-sm-3 ">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <?php echo e(Indicator::where(['code' => $map[17]->indicator])->first()->name, false); ?>
+
+                                </h5>
+                                <div class="badge rounded-pill badge-outline-warning">
+                                    
+                                    <?php echo e(key($map[17]->number), false); ?>
+
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <!--div class="col-sm-3 ">
-                                        <div class="card text-center">
-                                            <div class="card-body">
-                                                <h5 class="card-title">
-                                                    <?php echo e(Indicator::where(['code' => $map[17]->indicator])->first()->name, false); ?>
-
-                                                </h5>
-                                                <div class="badge rounded-pill badge-outline-warning">
-                                                    
-                                                    <?php echo e(key($map[17]->number), false); ?>
-
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div-->
                 <?php endif; ?>
             </div>
         </div>
