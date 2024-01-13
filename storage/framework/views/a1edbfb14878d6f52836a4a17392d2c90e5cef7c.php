@@ -81,22 +81,31 @@ use App\Models\Indicator;
                             </div>
                         </div>
                     </div>
-
-                    <div class="col-sm-3 ">
+                    <div class="col-sm-3">
                         <div class="card text-center">
                             <div class="card-body">
                                 <h5 class="card-title">
-                                    <?php echo e(Indicator::where(['code' => $map[17]->indicator])->first()->name, false); ?>
-
-                                </h5>
-                                <div class="badge rounded-pill badge-outline-warning">
-                                    
-                                    <?php echo e(key($map[17]->number), false); ?>
-
-                                </div>
+                                    <?php echo e(Indicator::where(['code' => $map[7]->indicator])->first()->name, false); ?></h5>
+                                <div class="badge rounded-pill badge-outline-warning"><?php echo e($map[7]->number, false); ?></div>
                             </div>
                         </div>
                     </div>
+
+                    <!--div class="col-sm-3 ">
+                                                <div class="card text-center">
+                                                    <div class="card-body">
+                                                        <h5 class="card-title">
+                                                            <?php echo e(Indicator::where(['code' => $map[17]->indicator])->first()->name, false); ?>
+
+                                                        </h5>
+                                                        <div class="badge rounded-pill badge-outline-warning">
+                                                            
+                                                            <?php echo e(key($map[17]->number), false); ?>
+
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div-->
                 <?php endif; ?>
             </div>
         </div>
