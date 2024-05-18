@@ -37,7 +37,7 @@ class CustomerController extends AdminController
         $grid = new Grid(new Customer());
         $currentUserId = Admin::user()->id;
 
-        $grid->model()->where('admin_id', '=', $currentUserId)->orderBy('id', 'desc');
+        // $grid->model()->where('admin_id', '=', $currentUserId)->orderBy('id', 'desc');
 
         $grid->column('last_name', __('Họ và chữ lót'));
         $grid->column('first_name', __('Tên'));
@@ -155,6 +155,12 @@ class CustomerController extends AdminController
         $form->hidden('age');
         $form->hidden('root');
         $form->hidden('year');
+
+        // 20240516 Bổ sung 3 chỉ số mới Bài học | Thái độ | Thế hệ
+        $form->hidden('lesson');
+        $form->hidden('attitude');
+        $form->hidden('generation');
+
         $form->saving(function (Form $form) {
         });
 
