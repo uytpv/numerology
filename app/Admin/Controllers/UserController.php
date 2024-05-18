@@ -2,8 +2,10 @@
 
 namespace App\Admin\Controllers;
 
+use Encore\Admin\Auth\Database\Administrator;
 use Encore\Admin\Auth\Database\Role;
 use Encore\Admin\Controllers\UserController as EncoreUserController;
+use Encore\Admin\Facades\Admin;
 
 class UserController extends EncoreUserController
 {
@@ -12,7 +14,13 @@ class UserController extends EncoreUserController
         $grid = parent::grid();
 
         $grid->model()->orderBy('id', 'desc');
-        // $grid->column('parent_id', 'Tuyến trên');
+
+        $grid->parent_id('Người tạo tài khoản')->display(function () {
+            $admin = Administrator::find($this->parent_id);
+            if (isset($admin)) {
+                return $admin->name;
+            }
+        })->sortable();
 
         $grid->filter(function ($filter) {
             // Remove the default id filter
@@ -28,13 +36,16 @@ class UserController extends EncoreUserController
                     $query->select('user_id')->from('admin_role_users')->where('role_id', $role_id);
                 });
             }, 'Role')->select(Role::all()->pluck('name', 'id'));
+
+            $filter->in('parent_id', 'Tìm theo Người tạo')->select(Administrator::all()->pluck('name', 'id'));
         });
         return $grid;
     }
     public function form()
     {
-        $f = parent::form();
-        // $f->text('parent_id');
-        return $f;
+        $form = parent::form();
+        $form->hidden('parent_id')->value(Admin::user()->id);
+        $form->ignore('permissions');
+        return $form;
     }
 }

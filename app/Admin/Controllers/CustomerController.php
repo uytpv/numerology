@@ -36,7 +36,9 @@ class CustomerController extends AdminController
     {
         $grid = new Grid(new Customer());
         $currentUserId = Admin::user()->id;
-        if (!Admin::user()->isAdministrator()) {
+
+        // Cho phép Administrator xem toàn bộ danh sách khách hàng
+        if ($currentUserId != 1) {
             $grid->model()->where('admin_id', '=', $currentUserId)->orderBy('id', 'desc');
         }
 
@@ -64,6 +66,10 @@ class CustomerController extends AdminController
         </a>';
             // return '/admin/showMap/' . $this->getKey();
         });
+
+        if ($currentUserId == 1) {
+            $grid->column('admin_id', __('KH của ai'));
+        }
 
         $grid->actions(function ($actions) {
             $actions->disableView();
