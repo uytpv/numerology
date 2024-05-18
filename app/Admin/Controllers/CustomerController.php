@@ -36,8 +36,9 @@ class CustomerController extends AdminController
     {
         $grid = new Grid(new Customer());
         $currentUserId = Admin::user()->id;
-
-        // $grid->model()->where('admin_id', '=', $currentUserId)->orderBy('id', 'desc');
+        if (!Admin::user()->isAdministrator()) {
+            $grid->model()->where('admin_id', '=', $currentUserId)->orderBy('id', 'desc');
+        }
 
         $grid->column('last_name', __('Họ và chữ lót'));
         $grid->column('first_name', __('Tên'));
