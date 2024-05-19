@@ -6,6 +6,7 @@ use App\Admin\Actions\Post\NumerologyCalculate;
 use App\Admin\Extensions\Tools\BatchUpdate;
 use App\Models\Customer;
 use App\Models\Indicator;
+use Encore\Admin\Auth\Database\Administrator;
 use Encore\Admin\Facades\Admin;
 use Encore\Admin\Controllers\AdminController;
 
@@ -68,7 +69,12 @@ class CustomerController extends AdminController
         });
 
         if ($currentUserId == 1) {
-            $grid->column('admin_id', __('KH của ai'));
+            $grid->admin_id('KH của')->display(function () {
+                $admin = Administrator::find($this->admin_id);
+                if (isset($admin)) {
+                    return $admin->name;
+                }
+            })->sortable();
         }
 
         $grid->actions(function ($actions) {
