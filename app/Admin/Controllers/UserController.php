@@ -12,17 +12,18 @@ class UserController extends EncoreUserController
     protected function grid()
     {
         $grid = parent::grid();
+        $currentUserId = Admin::user()->id;
 
         $grid->model()->orderBy('id', 'desc');
-
-        $grid->parent_id('Người tạo tài khoản')->display(function () {
-            $admin = Administrator::find($this->parent_id);
-            if (isset($admin)) {
-                return $admin->name;
-            }
-        })->sortable();
-
-        $grid->filter(function ($filter) {
+        if ($currentUserId == 1) {
+            $grid->parent_id('Người tạo tài khoản')->display(function () {
+                $admin = Administrator::find($this->parent_id);
+                if (isset($admin)) {
+                    return $admin->name;
+                }
+            })->sortable();
+        }
+        $grid->filter(function ($filter) use ($currentUserId) {
             // Remove the default id filter
             $filter->disableIdFilter();
             // Add a column filter
@@ -36,8 +37,9 @@ class UserController extends EncoreUserController
                     $query->select('user_id')->from('admin_role_users')->where('role_id', $role_id);
                 });
             }, 'Role')->select(Role::all()->pluck('name', 'id'));
-
-            $filter->in('parent_id', 'Tìm theo Người tạo')->select(Administrator::all()->pluck('name', 'id'));
+            if ($currentUserId == 1) {
+                $filter->in('parent_id', 'Tìm theo Người tạo')->select(Administrator::all()->pluck('name', 'id'));
+            }
         });
         return $grid;
     }
