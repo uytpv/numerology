@@ -366,9 +366,6 @@ class Indicator extends Model
         }
     }
 
-
-
-
     /* 20240428 - Chỉ số Bài học - Lesson
     * Tính các chỉ số Đường đời, Sứ mệnh, Linh hồn, Nhân cách, Trưởng thành, Ngày sinh
     * Nếu trong các phép tính của chỉ số trên xuất hiện số 13/4, 14/5, 16/7 hay 19/1 
@@ -396,16 +393,30 @@ class Indicator extends Model
 
         // kiểm tra expression Done
         if (self::ExpressionCalc($customer) == 1 || self::ExpressionCalc($customer) == 4 || self::ExpressionCalc($customer) == 5 || self::ExpressionCalc($customer) == 7) {
-            $fn = self::total(self::textToNumber(trim(self::convertViToEn($customer->first_name))));
-            $ln = explode(' ', trim(self::convertViToEn($customer->last_name))); // array
+            // $fn = self::total(self::textToNumber(trim(self::convertViToEn($customer->first_name))));
+            // $ln = explode(' ', trim(self::convertViToEn($customer->last_name))); // array
+            // $total_ln = 0;
+            // foreach ($ln as $word) {
+            //     $total_ln = $total_ln + self::total(self::textToNumber($word));
+            // }
+            // if (self::check($fn . $total_ln)) {
+            //     $lesson_arr['expression'] = true;
+            // }
 
-            $total_ln = 0;
-            foreach ($ln as $word) {
-                $total_ln = $total_ln + self::total(self::textToNumber($word));
+            /*
+            Đoạn này không dùng cách tính Sứ Mệnh như trước đây
+            Tính tổng các word trong full name sau đó mới cộng tiếp
+            VD Nguyễn Huỳnh Ngọc Huyền - 5 + 4 + 3 + 1 = 13 = 4 
+            */
+            $fullname_arr = explode(' ', trim(self::convertViToEn($fullname))); // tách fullname thành array
+            $fullname_num = '';
+            foreach ($fullname_arr as $word) {
+                $fullname_num .= strval(self::total(self::textToNumber($word))); // tính tổng từng chữ rồi ghép lại
             }
-            if (self::check($fn . $total_ln)) {
+
+            if (self::check($fullname_num)) { // check bài học
                 $lesson_arr['expression'] = true;
-            }
+            };
         }
 
         // kiểm tra heart_desire
