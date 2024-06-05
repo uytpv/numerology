@@ -41,6 +41,8 @@ class CustomerController extends AdminController
         // Cho phép Administrator xem toàn bộ danh sách khách hàng
         if ($currentUserId != 1) {
             $grid->model()->where('admin_id', '=', $currentUserId)->orderBy('id', 'desc');
+        } else {
+            $grid->model()->orderBy('id', 'desc');
         }
 
         $grid->column('last_name', __('Họ và chữ lót'));
