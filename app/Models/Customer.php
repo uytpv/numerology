@@ -17,7 +17,16 @@ class Customer extends Model
 {
     protected $table = 'customers';
     protected $fillable = [
-        'first_name', 'last_name', 'phone', 'email', 'dob', 'map', 'admin_id', 'note', 'created_at', 'updated_at',
+        'first_name',
+        'last_name',
+        'phone',
+        'email',
+        'dob',
+        'map',
+        'admin_id',
+        'note',
+        'created_at',
+        'updated_at',
         'life_path',
         'expression',
         'lpe_bridge',
@@ -68,12 +77,8 @@ class Customer extends Model
         $customer->generation = json_encode(Indicator::GenerationCalc($customer));
 
         $customer->map = json_encode(Customer::calculateMap($customer));
-
-
-
         return $customer;
     }
-
 
     public static function calculateMap($customer)
     {

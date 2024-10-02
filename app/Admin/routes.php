@@ -28,6 +28,8 @@ Route::group([
     //override route quản lý danh sách admin đến custom UserController override
     $router->resource('auth/users', UserController::class);
 
+    $router->get('/buy-me-coffee', 'BuyMeCoffeeController@index')->name('buy-me-coffee');
+
     //POST
     $router->post('customers/batch-update', 'CustomerController@updatePost');
 

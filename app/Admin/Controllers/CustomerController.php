@@ -6,6 +6,7 @@ use App\Admin\Actions\Post\NumerologyCalculate;
 use App\Admin\Extensions\Tools\BatchUpdate;
 use App\Models\Customer;
 use App\Models\Indicator;
+use Carbon\Carbon;
 use Encore\Admin\Auth\Database\Administrator;
 use Encore\Admin\Facades\Admin;
 use Encore\Admin\Controllers\AdminController;
@@ -176,8 +177,7 @@ class CustomerController extends AdminController
         $form->hidden('attitude');
         $form->hidden('generation');
 
-        $form->saving(function (Form $form) {
-        });
+        $form->saving(function (Form $form) {});
 
         $form->saved(function (Form $form) {;
             $cus = $form->model();
@@ -198,6 +198,11 @@ class CustomerController extends AdminController
     public function showMap($id, Content $content)
     {
         $customer = Customer::findOrFail($id);
+        // bổ sung: Kiểm tra, nếu NĂM (created_at) không phải NĂM hiện tại thì tính lại lần nữa để cập nhật Năm Cá Nhân
+        if ($customer->created_at->year <> Carbon::now()->year) {
+            $customer = Customer::calculateIndicators($customer);
+        }
+
         $map = json_decode($customer->map);
 
         return $content
