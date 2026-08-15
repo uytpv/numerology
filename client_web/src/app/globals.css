@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+:root {
+  --background: #06040A;
+  --foreground: #F3F1F6;
+  --primary: #8C52FF;
+  --primary-hover: #7A3BFF;
+  --accent-gold: #E5C158;
+  --card-bg: rgba(20, 16, 32, 0.6);
+  --border-color: rgba(140, 82, 255, 0.2);
+}
+
+@theme {
+  --font-sans: var(--font-sans), sans-serif;
+  --font-serif: var(--font-serif), serif;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(140, 82, 255, 0.1) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(229, 193, 88, 0.08) 0%, transparent 45%);
+  background-attachment: fixed;
+  font-family: var(--font-sans);
+  min-height: 100vh;
+}
+
+/* Glassmorphism Class */
+.glass-card {
+  background: var(--card-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  border-color: rgba(140, 82, 255, 0.4);
+  box-shadow: 0 12px 40px 0 rgba(140, 82, 255, 0.15);
+}
+
+/* Glow Effect */
+.gold-glow {
+  text-shadow: 0 0 10px rgba(229, 193, 88, 0.4);
+}
+
+.purple-glow {
+  text-shadow: 0 0 10px rgba(140, 82, 255, 0.4);
+}
+
+/* Wheel Rotation */
+@keyframes slow-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-slow-spin {
+  animation: slow-spin 120s linear infinite;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #06040A;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(140, 82, 255, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(140, 82, 255, 0.6);
+}
+
+/* CSS in ấn Bản đồ */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  
+  .glass-card {
+    background: transparent !important;
+    border: 1px solid #ccc !important;
+    box-shadow: none !important;
+    color: black !important;
+    page-break-inside: avoid;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
+}

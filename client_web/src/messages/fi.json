@@ -1,0 +1,58 @@
+{
+  "common": {
+    "title": "Pythagoraan Numerologian Elämänkartta",
+    "subtitle": "Löydä elämänpolkusi ja henkinen kasvu tieteellisen numerologisen analyysin avulla",
+    "fullName": "Koko Nimi",
+    "dob": "Syntymäaika",
+    "calculateBtn": "Laske Kartta",
+    "loading": "Lasketaan...",
+    "freeTier": "Ilmainen Raportti",
+    "tier1": "Taso 1 - Haasteiden Kartoitus",
+    "tier2": "Taso 2 - Ratkaisut & AI-valmentaja",
+    "unlocked": "Avattu",
+    "lockText": "Avaa Syvä Analyysi",
+    "printBtn": "Tulosta Kartta / Vie PDF",
+    "logout": "Kirjaudu ulos",
+    "loginTitle": "Kirjaudu Sisään",
+    "loginGoogle": "Kirjaudu sisään Googlella",
+    "language": "Kieli",
+    "calculateDescription": "Syötä virallinen nimesi ja syntymäaikasi tarkkojen laskelmien varmistamiseksi.",
+    "guestDisclaimer": "Voit laskea 3 ydinindikaattoria heti ilman sisäänkirjautumista.",
+    "login": "Kirjaudu sisään",
+    "lastName": "Sukunimi ja toiset nimet",
+    "firstName": "Etunimi"
+  },
+  "placeholder": {
+    "lastName": "esim. Virtanen",
+    "firstName": "esim. Matti",
+    "dob": "esim. 15/11/1980"
+  },
+  "validation": {
+    "invalidLastName": "Virheellinen sukunimi (ei saa sisältää numeroita, erikoismerkkejä ja pituuden on oltava vähintään 2 merkkiä).",
+    "invalidFirstName": "Virheellinen etunimi (ei saa sisältää numeroita, erikoismerkkejä ja pituuden on oltava vähintään 2 merkkiä).",
+    "invalidDob": "Virheellinen syntymäaika. Syötä muodossa PP/KK/VVVV (esim. 15/11/1980) todellinen päivämäärä.",
+    "generalError": "Karttaa ei voida laskea. Tarkista syntymäajan muoto."
+  },
+  "indicators": {
+    "life_path": "Elinpolun Numero",
+    "expression": "Ilmaisun Numero",
+    "lpe_bridge": "Elinpolun ja Ilmaisun Silta",
+    "heart_desire": "Sielun Kaipaus",
+    "personality": "Persoonallisuuden Numero",
+    "hdp_bridge": "Sielun ja Persoonallisuuden Silta",
+    "balance": "Tasapainon Numero",
+    "birthday": "Syntymäpäivän Numero",
+    "maturity": "Kypsyyden Numero",
+    "karmic_lessons": "Karmalliset Läksyt (Puuttuvat numerot)",
+    "rational_thought": "Rationaalinen Ajattelu",
+    "subconscious_confidence": "Alitajuinen Luottamus",
+    "hidden_passion": "Piilotettu Intohimo"
+  },
+  "tiers": {
+    "freeTitle": "Ydinarkkityypin Yhteenveto",
+    "tier1Title": "Suuret Esteet ja Haasteet",
+    "tier2Title": "Toimintasuunnitelma & AI-avustaja",
+    "solutionsTitle": "Ratkaisut & Uraohjaus",
+    "solutionsDesc": "Gemini AI:n laatima yksityiskohtainen suunnitelma, joka on räätälöity juuri sinun numeroprofiiliisi."
+  }
+}

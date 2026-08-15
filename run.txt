@@ -1,0 +1,10 @@
+***** Chạy emulator trước
+firebase emulators:start
+
+***** Chạy backend
+cd backend/
+npm run start:dev
+
+***** Chạy app
+cd client_web/
+npm run dev

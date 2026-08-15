@@ -1,0 +1,9 @@
+# NestJS & Node.js
+# ==========================================
+node_modules/
+dist/
+*.log
+.env
+.env.*
+!.env.example
+*.tsbuildinfo

@@ -1,0 +1,58 @@
+{
+  "common": {
+    "title": "Pythagorean Numerology Life Map",
+    "subtitle": "Discover your life path and psychological growth through scientific numerology analysis",
+    "fullName": "Full Name",
+    "dob": "Date of Birth",
+    "calculateBtn": "Calculate Map",
+    "loading": "Calculating...",
+    "freeTier": "Free Report",
+    "tier1": "Tier 1 - Challenge Discovery",
+    "tier2": "Tier 2 - Solutions & AI Coach",
+    "unlocked": "Unlocked",
+    "lockText": "Unlock Deep Analysis",
+    "printBtn": "Print Map / Export PDF",
+    "logout": "Logout",
+    "loginTitle": "System Login",
+    "loginGoogle": "Sign in with Google",
+    "language": "Language",
+    "calculateDescription": "Enter your official name and date of birth for the most accurate calculations.",
+    "guestDisclaimer": "You can calculate 3 core indicators immediately without logging in.",
+    "login": "Sign In",
+    "lastName": "Last Name",
+    "firstName": "First Name"
+  },
+  "placeholder": {
+    "lastName": "e.g. Smith",
+    "firstName": "e.g. John",
+    "dob": "e.g. 15/11/1980"
+  },
+  "validation": {
+    "invalidLastName": "Invalid last name (should not contain numbers, special characters, and must be at least 2 characters).",
+    "invalidFirstName": "Invalid first name (should not contain numbers, special characters, and must be at least 2 characters).",
+    "invalidDob": "Invalid date of birth. Please enter in DD/MM/YYYY format (e.g. 15/11/1980) with a valid real date.",
+    "generalError": "Unable to calculate map. Please check your date of birth format."
+  },
+  "indicators": {
+    "life_path": "Life Path Number",
+    "expression": "Expression Number",
+    "lpe_bridge": "Life Path - Expression Bridge",
+    "heart_desire": "Soul Urge / Heart's Desire",
+    "personality": "Personality Number",
+    "hdp_bridge": "Soul - Personality Bridge",
+    "balance": "Balance Number",
+    "birthday": "Birthday Number",
+    "maturity": "Maturity Number",
+    "karmic_lessons": "Karmic Lessons (Missing Numbers)",
+    "rational_thought": "Rational Thought",
+    "subconscious_confidence": "Subconscious Confidence",
+    "hidden_passion": "Hidden Passion"
+  },
+  "tiers": {
+    "freeTitle": "Core Archetype Summary",
+    "tier1Title": "Major Obstacles & Challenges",
+    "tier2Title": "Actionable Blueprint & AI Assistant",
+    "solutionsTitle": "Solutions & Career Guidance",
+    "solutionsDesc": "Detailed roadmap synthesized by Gemini AI tailored to your unique multi-indicator profile."
+  }
+}

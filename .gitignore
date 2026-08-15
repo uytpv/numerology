@@ -1,12 +1,68 @@
-/node_modules
-/public/hot
-/public/storage
-/storage/*.key
-/vendor
+# ==========================================
+# 1. Environment & Secret Keys (BẢO MẬT KEY/TOKEN)
+# ==========================================
 .env
-.env.backup
-.phpunit.result.cache
-Homestead.json
-Homestead.yaml
-npm-debug.log
-yarn-error.log
+.env.*
+!.env.example
+*.env
+*.pem
+*.key
+*.p12
+*.pfx
+*service-account*.json
+*firebase-key*.json
+*credentials*.json
+*secret*.json
+backend/.env
+client_web/.env.local
+client_web/.env*.local
+
+# ==========================================
+# 2. Dependency Directories (THƯ MỤC NẶNG/THỪA)
+# ==========================================
+node_modules/
+**/node_modules/
+vendor/
+archive_laravel/vendor/
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+
+# ==========================================
+# 3. Build & Compilation Outputs (FILE ĐÃ BUILD)
+# ==========================================
+dist/
+backend/dist/
+.next/
+client_web/.next/
+out/
+client_web/out/
+build/
+*.tsbuildinfo
+next-env.d.ts
+
+# ==========================================
+# 4. Logs & Firebase Debug (FILE LOG TẠM)
+# ==========================================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+firestore-debug.log
+ui-debug.log
+.firebase/
+
+# ==========================================
+# 5. OS & IDE System Files (FILE HỆ ĐIỀU HÀNH/IDE)
+# ==========================================
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json

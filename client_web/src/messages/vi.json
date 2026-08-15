@@ -1,0 +1,58 @@
+{
+  "common": {
+    "title": "Bản Đồ Thần Số Học Pythagoras",
+    "subtitle": "Khám phá bản sắc cuộc đời và giải pháp phát triển bản thân dưới góc nhìn tâm lý học khoa học",
+    "fullName": "Họ và Tên",
+    "dob": "Ngày Sinh",
+    "calculateBtn": "Tra Cứu Bản Đồ",
+    "loading": "Đang tính toán...",
+    "freeTier": "Miễn Phí",
+    "tier1": "Tier 1 - Khám Phá Thách Thức",
+    "tier2": "Tier 2 - Giải Pháp & AI Coach",
+    "unlocked": "Đã mở khóa",
+    "lockText": "Mở khóa phân tích sâu",
+    "printBtn": "In Bản Đồ / Xuất PDF",
+    "logout": "Đăng xuất",
+    "loginTitle": "Đăng Nhập Hệ Thống",
+    "loginGoogle": "Đăng nhập bằng Google",
+    "language": "Ngôn ngữ",
+    "calculateDescription": "Nhập chính xác thông tin trên giấy tờ để nhận kết quả luận giải chính xác nhất.",
+    "guestDisclaimer": "Bạn có thể tra cứu và tính ngay 3 chỉ số cơ bản mà không cần đăng nhập.",
+    "login": "Đăng nhập",
+    "lastName": "Họ và chữ lót",
+    "firstName": "Tên riêng"
+  },
+  "placeholder": {
+    "lastName": "Ví dụ: Nguyễn Hoàng",
+    "firstName": "Ví dụ: Vy",
+    "dob": "Ví dụ: 15/11/1980"
+  },
+  "validation": {
+    "invalidLastName": "Họ và chữ lót không hợp lệ (không chứa số, ký tự đặc biệt và tối thiểu 2 ký tự).",
+    "invalidFirstName": "Tên riêng không hợp lệ (không chứa số, ký tự đặc biệt và tối thiểu 2 ký tự).",
+    "invalidDob": "Ngày sinh không hợp lệ. Vui lòng nhập đúng định dạng DD/MM/YYYY (ví dụ: 15/11/1980) với ngày thực tế.",
+    "generalError": "Không thể tính toán chỉ số. Vui lòng kiểm tra lại định dạng Ngày sinh."
+  },
+  "indicators": {
+    "life_path": "Chỉ Số Đường Đời",
+    "expression": "Chỉ Số Sứ Mệnh",
+    "lpe_bridge": "Cầu Nối Đường Đời & Sứ Mệnh",
+    "heart_desire": "Chỉ Số Linh Hồn",
+    "personality": "Chỉ Số Nhân Cách",
+    "hdp_bridge": "Cầu Nối Linh Hồn & Nhân Cách",
+    "balance": "Chỉ Số Cân Bằng",
+    "birthday": "Chỉ Số Ngày Sinh",
+    "maturity": "Chỉ Số Trưởng Thành",
+    "karmic_lessons": "Bài Học Nghiệp (Số Thiếu)",
+    "rational_thought": "Tư Duy Lý Trí",
+    "subconscious_confidence": "Sức Mạnh Nội Tâm",
+    "hidden_passion": "Đam Mê Ẩn Giấu"
+  },
+  "tiers": {
+    "freeTitle": "Khái Quát Bản Sắc Cốt Lõi",
+    "tier1Title": "Các Điểm Nghẽn & Thách Thức Lớn",
+    "tier2Title": "Bản Đồ Hành Động & Trợ Lý AI",
+    "solutionsTitle": "Định Hướng Giải Pháp & Nghề Nghiệp",
+    "solutionsDesc": "Lộ trình chi tiết được Gemini AI thiết kế dựa trên sự phối hợp đa chỉ số của riêng bạn."
+  }
+}
