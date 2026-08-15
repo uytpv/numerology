@@ -1,6 +1,16 @@
-<<<<<<< HEAD
 # ==========================================
-# 1. Environment & Secret Keys (BẢO MẬT KEY/TOKEN)
+# 1. Database Backup & Large Data Files (BỎ QUA FILE SQL NẶNG)
+# ==========================================
+*.sql
+*.sqlite
+*.sqlite3
+*.db
+database/*.sql
+archive_laravel/database/*.sql
+numerology_bk_*.sql
+
+# ==========================================
+# 2. Environment & Secret Keys (BẢO MẬT KEY/TOKEN)
 # ==========================================
 .env
 .env.*
@@ -19,7 +29,7 @@ client_web/.env.local
 client_web/.env*.local
 
 # ==========================================
-# 2. Dependency Directories (THƯ MỤC NẶNG/THỪA)
+# 3. Dependency Directories (THƯ MỤC NẶNG/THỪA)
 # ==========================================
 node_modules/
 **/node_modules/
@@ -33,7 +43,7 @@ archive_laravel/vendor/
 !.yarn/releases
 
 # ==========================================
-# 3. Build & Compilation Outputs (FILE ĐÃ BUILD)
+# 4. Build & Compilation Outputs (FILE ĐÃ BUILD)
 # ==========================================
 dist/
 backend/dist/
@@ -46,7 +56,7 @@ build/
 next-env.d.ts
 
 # ==========================================
-# 4. Logs & Firebase Debug (FILE LOG TẠM)
+# 5. Logs & Firebase Debug (FILE LOG TẠM)
 # ==========================================
 *.log
 npm-debug.log*
@@ -58,7 +68,7 @@ ui-debug.log
 .firebase/
 
 # ==========================================
-# 5. OS & IDE System Files (FILE HỆ ĐIỀU HÀNH/IDE)
+# 6. OS & IDE System Files (FILE HỆ ĐIỀU HÀNH/IDE)
 # ==========================================
 .DS_Store
 Thumbs.db
@@ -67,19 +77,3 @@ Desktop.ini
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
-=======
-/node_modules
-/public/hot
-/public/storage
-/storage/*.key
-/vendor
-/.env
-/.env.backup
-/.phpunit.result.cache
-Homestead.json
-Homestead.yaml
-npm-debug.log
-yarn-error.log
-/storage/framework/sessions/
-/storage/framework/views
->>>>>>> aef690af78cfe305b573fd5c9f68d0bf357f7bb9
