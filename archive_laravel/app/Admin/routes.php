@@ -16,7 +16,7 @@ Route::group([
     $router->get('showDetail/{indicator}/{number}', 'IndicatorNumberController@showDetail');
     $router->get('documents', 'NDocumentController@index');
     $router->get('statistic', 'StatisticController@index');
-    
+
     //RESOURCE
     $router->resource('customers', CustomerController::class);
     $router->resource('numbers', NumberController::class);
@@ -25,12 +25,15 @@ Route::group([
     $router->resource('categories', CategoryController::class);
     $router->resource('document-types', DocumentTypeController::class);
     $router->resource('ndocuments', DocumentController::class);
-    
+    //override route quản lý danh sách admin đến custom UserController override
+    $router->resource('auth/users', UserController::class);
+
+    $router->get('/buy-me-coffee', 'BuyMeCoffeeController@index')->name('buy-me-coffee');
+
     //POST
     $router->post('customers/batch-update', 'CustomerController@updatePost');
 
     //API
     $router->get('/api/categories', 'CategoryController@categories');
     $router->get('/api/getDocuments', 'NDocumentController@get');
-
 });

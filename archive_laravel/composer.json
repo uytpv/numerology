@@ -8,14 +8,14 @@
     ],
     "license": "MIT",
     "require": {
-        "php": "^7.2.5|^8.0",
+        "php": "^8.0",
         "encore/laravel-admin": "^1.8",
         "fideloper/proxy": "^4.4",
         "fruitcake/laravel-cors": "^2.0",
         "guzzlehttp/guzzle": "^6.3.1|^7.0.1",
-        "intervention/image": "dev-master",
+        "intervention/image": "^2.7",
         "laravel-admin-ext/ckeditor": "^1.0",
-        "laravel/framework": "^7.29",
+        "laravel/framework": "^8.75.0 || ^9.0",
         "laravel/tinker": "^2.5"
     },
     "require-dev": {

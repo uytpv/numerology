@@ -32,7 +32,11 @@
         gtag('config', 'G-Q97MK9PP27');
     </script>
 
-<!-- Mã quảng cáo Google AdSense tài khoản ttn.nga2018@gmail.com -->
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3167317540432811"
-crossorigin="anonymous"></script>
+    <!-- Mã quảng cáo Google AdSense tài khoản ttn.nga2018@gmail.com -->
+    {{-- <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3167317540432811"
+        crossorigin="anonymous"></script> --}}
+
+    <!-- Mã quảng cáo Google AdSense tài khoản traphucvinhuy012022@gmail.com -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8058142871746806"
+        crossorigin="anonymous"></script>
 </head>

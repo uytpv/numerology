@@ -348,9 +348,7 @@ return [
     'minify_assets' => [
 
         // Assets will not be minified.
-        'excepts' => [
-
-        ],
+        'excepts' => [],
 
     ],
 
@@ -401,9 +399,7 @@ return [
             'enable' => true,
 
             // Editor configuration
-            'config' => [
-
-            ]
+            'config' => []
         ]
     ],
 ];

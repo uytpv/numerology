@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # ==========================================
 # 1. Environment & Secret Keys (BẢO MẬT KEY/TOKEN)
 # ==========================================
@@ -66,3 +67,19 @@ Desktop.ini
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
+=======
+/node_modules
+/public/hot
+/public/storage
+/storage/*.key
+/vendor
+/.env
+/.env.backup
+/.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+npm-debug.log
+yarn-error.log
+/storage/framework/sessions/
+/storage/framework/views
+>>>>>>> aef690af78cfe305b573fd5c9f68d0bf357f7bb9

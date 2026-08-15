@@ -20,9 +20,16 @@ class HomeController extends Controller
 
         // dd($start, $end);
 
-        $today_birthday_customers = Customer::where('admin_id', '=', $currentUserId)->whereMonth('dob', '=', Carbon::now()->format('m'))->whereDay('dob', '=', Carbon::now()->format('d'))->get();
-        $tomorow_birthday_customers = Customer::where('admin_id', '=', $currentUserId)->whereMonth('dob', '=', Carbon::now()->format('m'))->whereDay('dob', '=', Carbon::now()->addDay()->format('d'))->get();
-        $nextweek_birthday_customers = Customer::orderBy('dob', 'asc')->where('admin_id', '=', $currentUserId)->whereRaw("DAYOFYEAR(dob) BETWEEN $start AND $end")->get();
+        if ($currentUserId == 1) { // nếu là administrator thì lấy hết data
+            $today_birthday_customers = Customer::whereMonth('dob', '=', Carbon::now()->format('m'))->whereDay('dob', '=', Carbon::now()->format('d'))->get();
+            $tomorow_birthday_customers = Customer::whereMonth('dob', '=', Carbon::now()->format('m'))->whereDay('dob', '=', Carbon::now()->addDay()->format('d'))->get();
+            $nextweek_birthday_customers = Customer::orderBy('dob', 'asc')->whereRaw("DAYOFYEAR(dob) BETWEEN $start AND $end")->get();
+        } else {
+            $today_birthday_customers = Customer::where('admin_id', '=', $currentUserId)->whereMonth('dob', '=', Carbon::now()->format('m'))->whereDay('dob', '=', Carbon::now()->format('d'))->get();
+            $tomorow_birthday_customers = Customer::where('admin_id', '=', $currentUserId)->whereMonth('dob', '=', Carbon::now()->format('m'))->whereDay('dob', '=', Carbon::now()->addDay()->format('d'))->get();
+            $nextweek_birthday_customers = Customer::orderBy('dob', 'asc')->where('admin_id', '=', $currentUserId)->whereRaw("DAYOFYEAR(dob) BETWEEN $start AND $end")->get();
+        }
+
         return $content
             ->title('Dashboard')
             ->description('Description...')

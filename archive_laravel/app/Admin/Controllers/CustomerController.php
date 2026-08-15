@@ -6,6 +6,8 @@ use App\Admin\Actions\Post\NumerologyCalculate;
 use App\Admin\Extensions\Tools\BatchUpdate;
 use App\Models\Customer;
 use App\Models\Indicator;
+use Carbon\Carbon;
+use Encore\Admin\Auth\Database\Administrator;
 use Encore\Admin\Facades\Admin;
 use Encore\Admin\Controllers\AdminController;
 
@@ -37,7 +39,12 @@ class CustomerController extends AdminController
         $grid = new Grid(new Customer());
         $currentUserId = Admin::user()->id;
 
-        $grid->model()->where('admin_id', '=', $currentUserId)->orderBy('id', 'desc');
+        // Cho phép Administrator xem toàn bộ danh sách khách hàng
+        if ($currentUserId != 1) {
+            $grid->model()->where('admin_id', '=', $currentUserId)->orderBy('id', 'desc');
+        } else {
+            $grid->model()->orderBy('id', 'desc');
+        }
 
         $grid->column('last_name', __('Họ và chữ lót'));
         $grid->column('first_name', __('Tên'));
@@ -63,6 +70,15 @@ class CustomerController extends AdminController
         </a>';
             // return '/admin/showMap/' . $this->getKey();
         });
+
+        if ($currentUserId == 1) {
+            $grid->admin_id('KH của')->display(function () {
+                $admin = Administrator::find($this->admin_id);
+                if (isset($admin)) {
+                    return $admin->name;
+                }
+            })->sortable();
+        }
 
         $grid->actions(function ($actions) {
             $actions->disableView();
@@ -155,8 +171,13 @@ class CustomerController extends AdminController
         $form->hidden('age');
         $form->hidden('root');
         $form->hidden('year');
-        $form->saving(function (Form $form) {
-        });
+
+        // 20240516 Bổ sung 3 chỉ số mới Bài học | Thái độ | Thế hệ
+        $form->hidden('lesson');
+        $form->hidden('attitude');
+        $form->hidden('generation');
+
+        $form->saving(function (Form $form) {});
 
         $form->saved(function (Form $form) {;
             $cus = $form->model();
@@ -177,6 +198,11 @@ class CustomerController extends AdminController
     public function showMap($id, Content $content)
     {
         $customer = Customer::findOrFail($id);
+        // bổ sung: Kiểm tra, nếu NĂM (created_at) không phải NĂM hiện tại thì tính lại lần nữa để cập nhật Năm Cá Nhân
+        if ($customer->created_at->year <> Carbon::now()->year) {
+            $customer = Customer::calculateIndicators($customer);
+        }
+
         $map = json_decode($customer->map);
 
         return $content

@@ -1,0 +1,1 @@
+<?php /**PATH /home/stackops/www/numerology/resources/views/layout/bootstrap/footer.blade.php ENDPATH**/ ?>

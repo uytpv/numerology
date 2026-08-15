@@ -165,7 +165,7 @@ class Indicator extends Model
         return $s;
     }
 
-    public static function LifePathCalc($customer) // duong doi
+    public static function LifePathCalc($customer) // đường đời
     {
         $dateValue = Carbon::createFromFormat('d/m/Y', $customer->dob);
 
@@ -204,9 +204,9 @@ class Indicator extends Model
     }
     public static function PersonalityCalc($customer) // Nhân cách
     {
-        $fn = self::convertViToEn($customer->last_name) . ' ' . self::convertViToEn($customer->first_name);
+        $fullname = self::convertViToEn($customer->last_name) . ' ' . self::convertViToEn($customer->first_name);
         $consonant = '';
-        foreach (explode(' ', $fn) as $w) {
+        foreach (explode(' ', $fullname) as $w) {
             $consonant .= self::getVowelAndConsonant($w)['consonant'];
         }
 
@@ -329,6 +329,157 @@ class Indicator extends Model
         }
 
         return $p_yrs_mon;
+    }
+
+    // 20240518 Hàm kiểm tra xem có chỉ số Bài Học hay không
+    static function check($number)
+    {
+        $steps = [];
+
+        // Chuyển đổi số nguyên thành mảng các chữ số
+        $digits = str_split($number);
+
+        // Lặp lại cho đến khi còn lại 1 chữ số
+        while (count($digits) > 1) {
+            // Tính tổng các chữ số
+            $sum = 0;
+            foreach ($digits as $digit) {
+                $sum += (int) $digit;
+            }
+
+            // Cập nhật mảng các kết quả các bước
+            array_push($steps, $sum);
+
+            // Cập nhật mảng các chữ số
+            $digits = str_split($sum);
+        }
+
+        // Kiểm tra kết quả kế cuối cùng count phần tử của steps, phần tử cuối là n - 1 nên kế cuối là n - 2
+        if (count($steps) > 1) {
+            if ($steps[count($steps) - 2] == 13 || $steps[count($steps) - 2] == 14 || $steps[count($steps) - 2] == 16 || $steps[count($steps) - 2] == 19) {
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+
+    /* 20240428 - Chỉ số Bài học - Lesson
+    * Tính các chỉ số Đường đời, Sứ mệnh, Linh hồn, Nhân cách, Trưởng thành, Ngày sinh
+    * Nếu trong các phép tính của chỉ số trên xuất hiện số 13/4, 14/5, 16/7 hay 19/1 
+    * (Lưu ý: 13, 14, 16 hay 19 là các số xuất hiện trước khi rút gọn về 1 chữ số)
+    **/
+    public static function LessonCalc($customer) // 20240428 cập nhật chỉ số Bài Học
+    {
+        $lesson_arr = [
+            'life_path' => false,
+            'expression' => false,
+            'heart_desire' => false,
+            'personality' => false,
+            'maturity' => false,
+            'birthday' => false,
+        ];
+        $dateValue = Carbon::createFromFormat('d/m/Y', $customer->dob);
+        $fullname = self::convertViToEn($customer->last_name) . ' ' . self::convertViToEn($customer->first_name);
+
+        // kiểm tra life_path Done
+        if (self::LifePathCalc($customer) == 1 || self::LifePathCalc($customer) == 4 || self::LifePathCalc($customer) == 5 || self::LifePathCalc($customer) == 7) {
+            if (self::check(self::total($dateValue->year) . self::total($dateValue->month) . self::total($dateValue->day))) {
+                $lesson_arr['life_path'] = true;
+            }
+        }
+
+        // kiểm tra expression Done
+        if (self::ExpressionCalc($customer) == 1 || self::ExpressionCalc($customer) == 4 || self::ExpressionCalc($customer) == 5 || self::ExpressionCalc($customer) == 7) {
+            // $fn = self::total(self::textToNumber(trim(self::convertViToEn($customer->first_name))));
+            // $ln = explode(' ', trim(self::convertViToEn($customer->last_name))); // array
+            // $total_ln = 0;
+            // foreach ($ln as $word) {
+            //     $total_ln = $total_ln + self::total(self::textToNumber($word));
+            // }
+            // if (self::check($fn . $total_ln)) {
+            //     $lesson_arr['expression'] = true;
+            // }
+
+            /*
+            Đoạn này không dùng cách tính Sứ Mệnh như trước đây
+            Tính tổng các word trong full name sau đó mới cộng tiếp
+            VD Nguyễn Huỳnh Ngọc Huyền - 5 + 4 + 3 + 1 = 13 = 4 
+            */
+            $fullname_arr = explode(' ', trim(self::convertViToEn($fullname))); // tách fullname thành array
+            $fullname_num = '';
+            foreach ($fullname_arr as $word) {
+                $fullname_num .= strval(self::total(self::textToNumber($word))); // tính tổng từng chữ rồi ghép lại
+            }
+
+            if (self::check($fullname_num)) { // check bài học
+                $lesson_arr['expression'] = true;
+            };
+        }
+
+        // kiểm tra heart_desire
+        if (self::HeartDesireCalc($customer) == 1 || self::HeartDesireCalc($customer) == 4 || self::HeartDesireCalc($customer) == 5 || self::HeartDesireCalc($customer) == 7) {
+            $vowels = '';
+            foreach (explode(' ', $fullname) as $w) {
+                $vowels .= self::getVowelAndConsonant($w)['vowel'];
+            }
+            if (self::check(self::textToNumber($vowels))) {
+                $lesson_arr['heart_desire'] = true;
+            };
+        }
+
+        // kiểm tra personality Done
+        if (self::PersonalityCalc($customer) == 1 || self::PersonalityCalc($customer) == 4 || self::PersonalityCalc($customer) == 5 || self::PersonalityCalc($customer) == 7) {
+            $consonant = '';
+            foreach (explode(' ', $fullname) as $w) {
+                $consonant .= self::getVowelAndConsonant($w)['consonant'];
+            }
+
+            if (self::check(self::textToNumber($consonant))) {
+                $lesson_arr['personality'] = true;
+            };
+        }
+
+        // kiểm tra maturity Done
+        $m = $customer->life_path + $customer->expression;
+        if ($m == 13 || $m == 14 || $m == 16 || $m == 19) {
+            $lesson_arr['maturity'] = true;
+        }
+
+        // kiểm tra birthday Done
+        if ($dateValue->day == 13 || $dateValue->day == 14 || $dateValue->day == 16 || $dateValue->day == 19) {
+            $lesson_arr['birthday'] = true;
+        }
+
+        return $lesson_arr;
+    }
+
+    /* 20240428 - Chỉ số Thái độ - Attitude
+    * Được tính bằng cách cộng tất cả các chữ số trong ngày sinh và tháng sinh
+    * Bước 1: Rút gọn ngày và tháng sinh của bạn thành các số có một chữ số, trừ khi kết quả là 11, 22, 33
+    * Bước 2: Cộng các kết quả rút gọn có một chữ số với nhau (và cả 11, 22 hoặc 33 nếu có), nếu kết quả là số có hai chữ số, tiếp tục cộng tất cả các chữ số với nhau cho đến khi đạt kết quả là số có một chữ số từ 1 đến 9.
+    **/
+    public static function AttitudeCalc($customer)
+    {
+        $dateValue = Carbon::createFromFormat('d/m/Y', $customer->dob);
+        $month = self::total($dateValue->month); // total số tháng sinh
+        $date = self::total($dateValue->day); // total số ngày sinh
+
+
+        return self::totalIgnoreMaster($date + $month);
+    }
+
+    /* 20240428 - Chỉ số Thế Hệ - Generation
+    * Cộng tổng các chữ số trong năm sinh, sau đó rút gọn thành các số có 1 chữ số từ 1-9.
+    **/
+    public static function GenerationCalc($customer)
+    {
+        $dateValue = Carbon::createFromFormat('d/m/Y', $customer->dob);
+        $year = self::total($dateValue->year); // total số năm sinh
+
+        return self::totalIgnoreMaster($year);
     }
 
     public static function getIndicatorWithMasterArr()
