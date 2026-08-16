@@ -3,76 +3,75 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { 
   User, 
+  onAuthStateChanged, 
   signInWithPopup, 
   GoogleAuthProvider, 
-  signOut, 
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword
+  signOut
 } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
-interface AuthContextProps {
+interface AuthContextType {
   user: User | null;
   isAdmin: boolean;
+  isCoach: boolean;
   loading: boolean;
   loginWithGoogle: () => Promise<void>;
-  loginWithEmail: (email: string, pass: string) => Promise<void>;
-  registerWithEmail: (email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextProps | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  isAdmin: false,
+  isCoach: false,
+  loading: true,
+  loginWithGoogle: async () => {},
+  logout: async () => {},
+});
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isCoach, setIsCoach] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Đồng bộ hóa trạng thái đăng nhập
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      
       if (currentUser) {
-        // Kiểm tra/Lưu thông tin người dùng vào Firestore
-        const userDocRef = doc(db, 'users', currentUser.uid);
-        const userDoc = await getDoc(userDocRef);
-
-        const isLocal = typeof window !== 'undefined' && 
-          (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-        const isAllowedAdminEmail = currentUser.email === 'admin@admin.com' || 
-          currentUser.email === 'su@gmail.com' ||
-          currentUser.email === 'traphucvinhuy012022@gmail.com';
-
-        if (!userDoc.exists()) {
-          // Lưu mới người dùng
-          const role = (isLocal && isAllowedAdminEmail) ? 'admin' : 'client';
+        try {
+          // Kiểm tra / Tạo hồ sơ User trong Firestore
+          const userDocRef = doc(db, 'users', currentUser.uid);
+          const userDocSnap = await getDoc(userDocRef);
           
-          await setDoc(userDocRef, {
-            email: currentUser.email || '',
-            displayName: currentUser.displayName || '',
-            photoURL: currentUser.photoURL || '',
-            role: role,
-            createdAt: new Date().toISOString()
-          });
-          setIsAdmin(role === 'admin');
-        } else {
-          // Nếu tài khoản đã tồn tại ở local và có email được cho phép làm admin, tự động nâng cấp quyền
-          if (isLocal && isAllowedAdminEmail) {
-            const data = userDoc.data();
-            if (data?.role !== 'admin') {
-              await setDoc(userDocRef, { role: 'admin' }, { merge: true });
-            }
-            setIsAdmin(true);
+          if (!userDocSnap.exists()) {
+            await setDoc(userDocRef, {
+              email: currentUser.email,
+              displayName: currentUser.displayName,
+              photoURL: currentUser.photoURL,
+              role: 'user',
+              credits: 0,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            });
+            setIsAdmin(false);
+            setIsCoach(false);
           } else {
-            const data = userDoc.data();
+            const data = userDocSnap.data();
             setIsAdmin(data?.role === 'admin');
+            setIsCoach(data?.role === 'coach' || data?.role === 'admin' || !!data?.isCoach);
           }
+        } catch (error) {
+          console.error('Lỗi khi đọc/ghi thông tin người dùng từ Firestore:', error);
+          setIsAdmin(false);
+          setIsCoach(false);
         }
       } else {
         setIsAdmin(false);
+        setIsCoach(false);
       }
+      
       setLoading(false);
     });
 
@@ -80,33 +79,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const loginWithGoogle = async () => {
-    const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
-  };
-
-  const loginWithEmail = async (email: string, pass: string) => {
-    await signInWithEmailAndPassword(auth, email, pass);
-  };
-
-  const registerWithEmail = async (email: string, pass: string) => {
-    await createUserWithEmailAndPassword(auth, email, pass);
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      await signInWithPopup(auth, provider);
+    } catch (error: any) {
+      if (error?.code === 'auth/popup-closed-by-user' || error?.code === 'auth/cancelled-popup-request') {
+        // Người dùng tự đóng popup đăng nhập, không coi là lỗi nghiêm trọng
+        return;
+      }
+      console.error('Lỗi đăng nhập Google:', error);
+      throw error;
+    }
   };
 
   const logout = async () => {
-    await signOut(auth);
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error('Lỗi đăng xuất:', error);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAdmin, loading, loginWithGoogle, loginWithEmail, registerWithEmail, logout }}>
+    <AuthContext.Provider value={{ user, isAdmin, isCoach, loading, loginWithGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth phải được bọc trong AuthProvider');
-  }
-  return context;
-};
+export const useAuth = () => useContext(AuthContext);

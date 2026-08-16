@@ -1,10 +1,32 @@
-***** Chạy emulator trước
-firebase emulators:start
+=======================================================
+HƯỚNG DẪN CHẠY DỰ ÁN TRÊN LOCALHOST
+=======================================================
 
-***** Chạy backend
-cd backend/
-npm run start:dev
+--- CÁCH 1: Chạy kèm Firebase Emulator (Môi trường test cục bộ) ---
 
-***** Chạy app
-cd client_web/
-npm run dev
+1. Cài đặt Firebase CLI global (chỉ cần làm 1 lần):
+   npm install -g firebase-tools
+
+2. Khởi động Emulator (Auth cổng 9099, Firestore cổng 8080, UI cổng 4000):
+   npx firebase-tools emulators:start
+   (hoặc nếu đã cài global: firebase emulators:start)
+
+3. Mở tab terminal thứ 2 - Chạy Backend NestJS (API & Webhook):
+   cd backend
+   npm run start:dev
+
+4. Mở tab terminal thứ 3 - Chạy Frontend Next.js:
+   cd client_web
+   npm run dev
+   -> Truy cập: http://localhost:3000
+
+
+--- CÁCH 2: Chạy trực tiếp kết nối Cloud Firebase (Không cần bật Emulator) ---
+
+1. Trong thư mục client_web, tạo hoặc sửa file .env.local:
+   NEXT_PUBLIC_USE_FIREBASE_EMULATOR=false
+
+2. Chạy Frontend Next.js:
+   cd client_web
+   npm run dev
+   -> Truy cập: http://localhost:3000

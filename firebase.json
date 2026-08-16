@@ -4,7 +4,7 @@
     "indexes": "firestore.indexes.json"
   },
   "hosting": {
-    "site": "thansohoc",
+    "site": "lifemaps",
     "public": "client_web/out",
     "ignore": [
       "firebase.json",

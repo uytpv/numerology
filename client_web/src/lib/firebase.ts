@@ -8,7 +8,7 @@ const firebaseConfig = {
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "numerology-330e9",
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "numerology-330e9.firebasestorage.app",
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "271833886691",
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:271833886691:web:c1fb1570ae336d2c62bad6"
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:271833886691:web:1d71301c0455953462bad6"
 };
 
 // Khởi tạo Firebase App

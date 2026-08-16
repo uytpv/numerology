@@ -1,6 +1,6 @@
 {
   "common": {
-    "title": "Pythagorean Numerology Life Map",
+    "title": "Life Maps - Pythagorean Numerology Map",
     "subtitle": "Discover your life path and psychological growth through scientific numerology analysis",
     "fullName": "Full Name",
     "dob": "Date of Birth",
@@ -8,7 +8,7 @@
     "loading": "Calculating...",
     "freeTier": "Free Report",
     "tier1": "Tier 1 - Challenge Discovery",
-    "tier2": "Tier 2 - Solutions & AI Coach",
+    "tier2": "Tier 2 - Solutions & Action Plan",
     "unlocked": "Unlocked",
     "lockText": "Unlock Deep Analysis",
     "printBtn": "Print Map / Export PDF",
@@ -51,8 +51,8 @@
   "tiers": {
     "freeTitle": "Core Archetype Summary",
     "tier1Title": "Major Obstacles & Challenges",
-    "tier2Title": "Actionable Blueprint & AI Assistant",
+    "tier2Title": "Actionable Blueprint & Roadmap",
     "solutionsTitle": "Solutions & Career Guidance",
-    "solutionsDesc": "Detailed roadmap synthesized by Gemini AI tailored to your unique multi-indicator profile."
+    "solutionsDesc": "Detailed roadmap synthesized based on your unique multi-indicator profile."
   }
 }

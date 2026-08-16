@@ -8,7 +8,7 @@
     "loading": "Lasketaan...",
     "freeTier": "Ilmainen Raportti",
     "tier1": "Taso 1 - Haasteiden Kartoitus",
-    "tier2": "Taso 2 - Ratkaisut & AI-valmentaja",
+    "tier2": "Taso 2 - Ratkaisut & Toimintasuunnitelma",
     "unlocked": "Avattu",
     "lockText": "Avaa Syvä Analyysi",
     "printBtn": "Tulosta Kartta / Vie PDF",
@@ -51,8 +51,8 @@
   "tiers": {
     "freeTitle": "Ydinarkkityypin Yhteenveto",
     "tier1Title": "Suuret Esteet ja Haasteet",
-    "tier2Title": "Toimintasuunnitelma & AI-avustaja",
+    "tier2Title": "Toimintasuunnitelma & Lộ trình",
     "solutionsTitle": "Ratkaisut & Uraohjaus",
-    "solutionsDesc": "Gemini AI:n laatima yksityiskohtainen suunnitelma, joka on räätälöity juuri sinun numeroprofiiliisi."
+    "solutionsDesc": "Yksityiskohtainen suunnitelma, joka on räätälöity juuri sinun numeroprofiiliisi."
   }
 }

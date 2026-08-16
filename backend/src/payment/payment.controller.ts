@@ -1,68 +1,153 @@
-import { Controller, Post, Body, Headers, HttpCode, HttpStatus, BadRequestException, RawBodyRequest, Req } from '@nestjs/common';
-import { CustomersService } from '../customers/customers.service';
+﻿import { Controller, Post, Get, Body, Param, Headers, HttpCode, HttpStatus, BadRequestException, Req, UseGuards, Query } from '@nestjs/common';
+import { PaymentService } from './payment.service';
+import { PayOSService } from './payos.service';
 import { ConfigService } from '@nestjs/config';
+import { AuthGuard } from '../auth/guards/auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import * as crypto from 'crypto';
 
 @Controller('api/v1/payments')
 export class PaymentController {
   constructor(
-    private customersService: CustomersService,
+    private paymentService: PaymentService,
+    private payOSService: PayOSService,
     private configService: ConfigService,
   ) {}
 
   /**
-   * Endpoint nhận Webhook từ Lemon Squeezy khi giao dịch hoàn tất
+   * Lấy danh sách các bảng giá B2C và B2B Coach
+   */
+  @Get('plans')
+  getPricingPlans() {
+    return this.paymentService.getPricingPlans();
+  }
+
+  /**
+   * Tạo đơn thanh toán PayOS (Mã QR VietQR)
+   */
+  @Post('payos/create-link')
+  async createPayOSLink(
+    @Body() body: {
+      planId: string;
+      customerId?: string;
+      userId?: string;
+      userEmail?: string;
+      cancelUrl?: string;
+      returnUrl?: string;
+    },
+  ) {
+    if (!body.planId) {
+      throw new BadRequestException('Vui lòng chọn gói dịch vụ (planId)');
+    }
+
+    const cancelUrl = body.cancelUrl || 'http://localhost:3000?payment=cancelled';
+    const returnUrl = body.returnUrl || 'http://localhost:3000?payment=success';
+    const userId = body.userId || 'guest_user';
+
+    return this.paymentService.createPayOSOrder({
+      planId: body.planId,
+      customerId: body.customerId,
+      userId,
+      userEmail: body.userEmail,
+      cancelUrl,
+      returnUrl,
+    });
+  }
+
+  /**
+   * Kiểm tra trạng thái đơn hàng (Polling / Real-time Sync)
+   */
+  @Get('order-status/:orderCode')
+  async getOrderStatus(@Param('orderCode') orderCode: string) {
+    return this.paymentService.getOrderStatus(orderCode);
+  }
+
+  /**
+   * Endpoint nhận Webhook tự động từ PayOS khi khách chuyển khoản VietQR thành công
+   */
+  @Post('webhook/payos')
+  @HttpCode(HttpStatus.OK)
+  async handlePayOSWebhook(@Body() payload: any) {
+    console.log('=== [WEBHOOK PAYOS NHẬN TÍN HIỆU] ===', JSON.stringify(payload));
+
+    const isValidSignature = this.payOSService.verifyWebhookSignature(payload);
+    if (!isValidSignature) {
+      console.error('Chữ ký Webhook PayOS không hợp lệ!');
+      throw new BadRequestException('Chữ ký Webhook PayOS không hợp lệ');
+    }
+
+    const data = payload?.data;
+    if (data && payload.code === '00' && data.orderCode) {
+      const orderCode = Number(data.orderCode);
+      await this.paymentService.processSuccessfulOrder(orderCode, data);
+      return { success: true, message: `Kích hoạt thành công đơn hàng #${orderCode}` };
+    }
+
+    return { success: true, message: 'Đã nhận webhook nhưng không có lệnh kích hoạt' };
+  }
+
+  /**
+   * Endpoint nhận Webhook từ Lemon Squeezy (Thẻ quốc tế USD / EUR)
    */
   @Post('webhook/lemonsqueezy')
   @HttpCode(HttpStatus.OK)
   async handleLemonSqueezyWebhook(
     @Body() payload: any,
     @Headers('x-signature') signature: string,
-    @Req() req: any // Cần raw body để xác thực chữ ký chính xác
+    @Req() req: any
   ) {
-    console.log('--- NHẬN WEBHOOK LEMON SQUEEZY ---');
-    
-    // 1. Xác thực chữ ký webhook từ Lemon Squeezy (Nếu được cấu hình)
+    console.log('=== [WEBHOOK LEMON SQUEEZY NHẬN TÍN HIỆU] ===');
+
     const webhookSecret = this.configService.get<string>('LEMON_SQUEEZY_WEBHOOK_SECRET');
     if (webhookSecret && signature) {
       const rawBody = req.rawBody ? req.rawBody.toString() : JSON.stringify(payload);
       const hmac = crypto.createHmac('sha256', webhookSecret);
       const digest = hmac.update(rawBody).digest('hex');
-      
+
       if (!crypto.timingSafeEqual(Buffer.from(signature, 'hex'), Buffer.from(digest, 'hex'))) {
         console.error('Chữ ký Webhook Lemon Squeezy không hợp lệ!');
         throw new BadRequestException('Chữ ký Webhook không khớp');
       }
-      console.log('Xác thực chữ ký Webhook thành công.');
     }
 
-    // 2. Phân tích sự kiện Order
     const eventName = payload?.meta?.event_name;
     const customData = payload?.meta?.custom_data;
 
-    console.log(`Event Name: ${eventName}`);
-    console.log('Custom Data:', customData);
-
-    if (eventName === 'order_created' || eventName === 'order_refunded') {
+    if (eventName === 'order_created') {
+      const orderCode = Number(customData?.order_code || customData?.orderCode || Date.now());
       const customerId = customData?.customer_id;
       const tier = parseInt(customData?.tier, 10);
 
-      if (!customerId || isNaN(tier)) {
-        console.warn('Thiếu thông tin customer_id hoặc tier trong custom_data!');
-        return { message: 'Bỏ qua vì thiếu custom_data' };
+      // Nếu có sẵn đơn trong hệ thống
+      if (customData?.order_code) {
+        await this.paymentService.processSuccessfulOrder(Number(customData.order_code), payload);
+      } else if (customerId && !isNaN(tier)) {
+        // Luồng fallback unlock trực tiếp
+        await this.paymentService.processSuccessfulOrder(orderCode, {
+          customerId,
+          targetTier: tier,
+          payload,
+        });
       }
 
-      if (eventName === 'order_created') {
-        // Mở khóa các tính năng Premium
-        await this.customersService.unlockTier(customerId, tier);
-        return { status: 'success', message: `Đã mở khóa thành công Tier ${tier} cho khách hàng ${customerId}` };
-      } else if (eventName === 'order_refunded') {
-        // Khóa lại cấp độ (hạ về Tier 0 - Free)
-        await this.customersService.unlockTier(customerId, 0);
-        return { status: 'success', message: `Đã hoàn tiền và khóa lại tài khoản khách hàng ${customerId}` };
-      }
+      return { status: 'success', message: 'Kích hoạt thành công đơn hàng Lemon Squeezy' };
     }
 
-    return { message: 'Nhận sự kiện thành công nhưng không cần xử lý' };
+    return { message: 'Đã nhận webhook' };
+  }
+
+  /**
+   * Endpoint Test Giả lập Thanh toán nhanh trong môi trường Sandbox/Dev
+   */
+  @Post('dev-mock-pay')
+  async simulatePayment(@Body() body: { orderCode: number }) {
+    if (!body.orderCode) {
+      throw new BadRequestException('Thiếu orderCode');
+    }
+    const result = await this.paymentService.processSuccessfulOrder(body.orderCode, {
+      simulated: true,
+      note: 'Thanh toán giả lập môi trường Test Dev',
+    });
+    return { success: result, message: `Đã kích hoạt giả lập thành công đơn hàng #${body.orderCode}` };
   }
 }

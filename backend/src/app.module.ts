@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+﻿import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -6,10 +6,10 @@ import { FirebaseModule } from './firebase/firebase.module';
 import { AIModule } from './ai/ai.module';
 import { CustomersModule } from './customers/customers.module';
 import { PaymentModule } from './payment/payment.module';
+import { CoachesModule } from './coaches/coaches.module';
 
 @Module({
   imports: [
-    // Load các biến cấu hình toàn hệ thống
     ConfigModule.forRoot({
       isGlobal: true,
     }),
@@ -17,6 +17,7 @@ import { PaymentModule } from './payment/payment.module';
     AIModule,
     CustomersModule,
     PaymentModule,
+    CoachesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

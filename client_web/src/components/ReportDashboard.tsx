@@ -1,496 +1,654 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useTranslation } from '../lib/i18n';
-import { useAuth } from '../lib/auth';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import axios from 'axios';
-import canvasConfetti from 'canvas-confetti';
+import React, { useState } from 'react';
+import { useAuth } from '@/lib/auth';
+import { generate3LayerNumerologyData } from '@/lib/numerologyReportGenerator';
+import PricingSection from './PricingSection';
+import { LeadRequestModal } from './LeadRequestModal';
 import { 
-  Sparkles, Lock, Unlock, Printer, Send, MessageCircle, AlertTriangle, 
-  HelpCircle, CheckCircle, ArrowRight, BookOpen, Star, RefreshCw 
+  Sparkles, Printer, UserCheck, Lock, Unlock, Headphones, 
+  Compass, ShieldAlert, Award, ArrowRight, Check, AlertCircle, 
+  FileText, UserPlus, HelpCircle 
 } from 'lucide-react';
 
-interface ReportDashboardProps {
-  initialCustomer: any;
+export interface ReportDashboardProps {
+  customer?: any;
+  initialCustomer?: any;
+  isExistingRecord?: boolean;
+  onRefresh?: () => void;
 }
 
-export const ReportDashboard: React.FC<ReportDashboardProps> = ({ initialCustomer }) => {
-  const { t, locale } = useTranslation();
-  const { user } = useAuth();
-  
-  const [customer, setCustomer] = useState(initialCustomer);
-  const [activeTab, setActiveTab] = useState<'free' | 'tier1' | 'tier2'>('free');
-  
-  const [aiReports, setAiReports] = useState<Record<number, any>>({});
-  const [loadingAI, setLoadingAI] = useState(false);
-  const [aiError, setAiError] = useState<string | null>(null);
+export function ReportDashboard({ customer, initialCustomer, isExistingRecord, onRefresh }: ReportDashboardProps) {
+  const currentCustomer = customer || initialCustomer;
+  const { user, loginWithGoogle } = useAuth();
+  const [activeTab, setActiveTab] = useState<'map' | 'layer2' | 'layer3' | 'support_chat' | 'pricing'>('map');
+  const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
+  const fullName = `${currentCustomer?.last_name || ''} ${currentCustomer?.first_name || ''}`.trim() || 'Người Dùng';
+  const isPaid = currentCustomer?.tier === 'paid' || currentCustomer?.tier === 'coach' || currentCustomer?.is_paid;
 
-  // Trò chuyện với AI (Tier 2)
-  const [chatMessages, setChatMessages] = useState<Array<{ sender: 'user' | 'ai'; text: string }>>([]);
+  const [chatMessages, setChatMessages] = useState<Array<{ sender: 'support' | 'user'; text: string; showCoachButton?: boolean }>>([
+    {
+      sender: 'support',
+      text: `Xin chào ${currentCustomer?.first_name || 'bạn'}! Tôi là Trợ Lý Hỗ Trợ Life Maps. Tôi có thể hỗ trợ bạn:\n\n1. 📖 Tra cứu định nghĩa & ý nghĩa cơ bản của các con số (Đường Đời, Sứ Mệnh, Linh Hồn...)\n2. 💳 Hướng dẫn thanh toán VietQR & mở khóa gói dịch vụ\n3. 📄 Hướng dẫn xem, in và xuất file báo cáo PDF\n4. 🤝 Hướng dẫn kết nối trực tiếp với Chuyên Gia Life Coach 1-1\n\nBạn cần hỗ trợ điều gì hôm nay?`,
+    },
+  ]);
   const [inputMessage, setInputMessage] = useState('');
-  const [sendingChat, setSendingChat] = useState(false);
+  const [isSupportTyping, setIsSupportTyping] = useState(false);
 
-  // Lắng nghe Firestore thời gian thực để tự động mở khóa khi thanh toán thành công
-  useEffect(() => {
-    if (!customer?.id) return;
+  const { layer1, layer2, layer3 } = generate3LayerNumerologyData(currentCustomer);
 
-    const docRef = doc(db, 'customers', customer.id);
-    const unsubscribe = onSnapshot(docRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const updatedData = docSnap.data();
-        
-        // Nếu vừa được mở khóa, bắn confetti chúc mừng
-        if (updatedData.unlockedTier > customer.unlockedTier) {
-          canvasConfetti({
-            particleCount: 150,
-            spread: 80,
-            origin: { y: 0.6 }
-          });
-        }
-        
-        setCustomer({ id: docSnap.id, ...updatedData });
-      }
-    });
-
-    return () => unsubscribe();
-  }, [customer?.id, customer?.unlockedTier]);
-
-  // Tải báo cáo AI từ backend dựa theo Tab được chọn
-  const loadAIReport = async (tier: number) => {
-    if (customer.unlockedTier < tier) return; // Chưa mua thì không tải
-
-    const cacheKey = `${tier}_${locale}`;
-    if (aiReports[tier]) return; // Đã load rồi
-
-    setLoadingAI(true);
-    setAiError(null);
-
-    try {
-      const idToken = await user?.getIdToken();
-      // Gọi API NestJS Backend
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
-      const response = await axios.get(`${backendUrl}/api/v1/customers/${customer.id}/report`, {
-        params: { tier, lang: locale },
-        headers: { Authorization: `Bearer ${idToken}` }
-      });
-
-      setAiReports(prev => ({
-        ...prev,
-        [tier]: response.data
-      }));
-    } catch (error: any) {
-      console.error('Lỗi tải báo cáo AI:', error);
-      setAiError(error.response?.data?.message || 'Không thể kết nối đến máy chủ AI');
-    } finally {
-      setLoadingAI(false);
-    }
-  };
-
-  // Tự động tải báo cáo tương ứng khi chuyển Tab hoặc đổi ngôn ngữ
-  useEffect(() => {
-    if (activeTab === 'free') {
-      loadAIReport(0);
-    } else if (activeTab === 'tier1') {
-      loadAIReport(1);
-    } else if (activeTab === 'tier2') {
-      loadAIReport(2);
-    }
-  }, [activeTab, locale, customer?.unlockedTier]);
-
-  // Luồng thanh toán Sandbox (Lemon Squeezy)
-  const handlePayment = (targetTier: number) => {
-    // Tạo link thanh toán giả lập sandbox
-    // Truyền customer_id và targetTier qua custom_data để Webhook backend bắt
-    const sandboxCheckoutUrl = `https://numerology-sandbox-checkout.lemonsqueezy.com/mock-checkout?customer_id=${customer.id}&tier=${targetTier}`;
-    
-    // Mở hộp thoại thông báo giả lập thanh toán (Trong môi trường dev)
-    alert(`[Giả Lập Thanh Toán Sandbox]
-Hệ thống sẽ chuyển hướng bạn đến cổng Lemon Squeezy.
-* Đối với môi trường dev, chúng tôi sẽ kích hoạt webhook trực tiếp sau 3 giây để mở khóa ngay lập tức!`);
-    
-    // Gọi API giả lập webhook trên môi trường dev
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
-    axios.post(`${backendUrl}/api/v1/payments/webhook/lemonsqueezy`, {
-      meta: {
-        event_name: 'order_created',
-        custom_data: {
-          customer_id: customer.id,
-          tier: targetTier
-        }
-      }
-    }).then(() => {
-      console.log('Webhook test triggered');
-    }).catch(err => {
-      console.error('Webhook error:', err);
-    });
-  };
-
-  // Gửi tin nhắn chat với AI Coach (Tier 2)
-  const handleSendMessage = async (e: React.FormEvent) => {
+  const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputMessage.trim() || sendingChat) return;
+    if (!inputMessage.trim() || isSupportTyping) return;
 
-    const userText = inputMessage;
+    const userText = inputMessage.trim();
     setChatMessages(prev => [...prev, { sender: 'user', text: userText }]);
     setInputMessage('');
-    setSendingChat(true);
+    setIsSupportTyping(true);
 
-    try {
-      const idToken = await user?.getIdToken();
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
-      
-      // Gửi tin nhắn kèm theo bản đồ số học làm context
-      const response = await axios.post(`${backendUrl}/api/v1/customers/${customer.id}/chat`, {
-        message: userText,
-        chatHistory: chatMessages,
-        lang: locale
-      }, {
-        headers: { Authorization: `Bearer ${idToken}` }
-      });
+    setTimeout(() => {
+      const lower = userText.toLowerCase();
+      let replyText = '';
+      let showCoachBtn = false;
 
-      setChatMessages(prev => [...prev, { sender: 'ai', text: response.data.reply }]);
-    } catch (err: any) {
-      setChatMessages(prev => [...prev, { sender: 'ai', text: 'Xin lỗi, tôi gặp sự cố kết nối. Hãy thử lại sau.' }]);
-    } finally {
-      setSendingChat(false);
-    }
+      if (lower.includes('thanh toán') || lower.includes('mua gói') || lower.includes('nạp') || lower.includes('giá') || lower.includes('vietqr')) {
+        replyText = `💳 Hướng dẫn thanh toán & Kích hoạt gói:\n\n1. Bạn vui lòng chuyển sang tab "Gói Nâng Cấp" hoặc truy cập trang /pricing.\n2. Chọn gói phù hợp (Gói Cá Nhân 200k, Gói Gia Đình 890k, hoặc các gói Coach).\n3. Quét mã VietQR trên màn hình. Hệ thống sẽ tự động đối soát và mở khóa trọn vẹn quyền lợi chỉ sau 3-5 giây.`;
+      } else if (lower.includes('in') || lower.includes('pdf') || lower.includes('tải')) {
+        replyText = `📄 Hướng dẫn in & tải file báo cáo:\n\nBạn có thể bấm vào nút "In Bản Đồ / Xuất PDF" ở góc phải trang hồ sơ để mở giao diện chuẩn A4. Sau đó chọn "In" hoặc "Lưu dưới dạng PDF" trên trình duyệt.`;
+      } else if (lower.includes('đường đời') || lower.includes('life path')) {
+        replyText = `📖 Định nghĩa Chỉ Số Đường Đời (Tầng 1):\n\nChỉ số Đường Đời (${currentCustomer?.map?.life_path || 'chủ đạo'}) đại diện cho con đường vận mệnh, bài học phát triển cốt lõi và mục tiêu tối thượng mà bạn trải nghiệm trong kiếp sống này. Đây là con số nền tảng dẫn dắt toàn bộ năng lượng của bạn.`;
+        showCoachBtn = true;
+      } else if (lower.includes('sứ mệnh') || lower.includes('expression')) {
+        replyText = `📖 Định nghĩa Chỉ Số Sứ Mệnh (Tầng 1):\n\nChỉ số Sứ Mệnh (${currentCustomer?.map?.expression || 'chủ đạo'}) đại diện cho công cụ, thế mạnh bẩm sinh và cách thức bạn hành động để hoàn thành con đường vận mệnh của mình.`;
+        showCoachBtn = true;
+      } else if (lower.includes('linh hồn') || lower.includes('heart')) {
+        replyText = `📖 Định nghĩa Chỉ Số Linh Hồn (Tầng 1):\n\nChỉ số Linh Hồn (${currentCustomer?.map?.heart_desire || 'chủ đạo'}) phản ánh khát khao thầm kín, giá trị tinh thần bên trong và điều thực sự mang lại cho bạn cảm giác bình an và hạnh phúc.`;
+        showCoachBtn = true;
+      } else {
+        // Tư vấn chuyên sâu / gỡ rối / câu hỏi mở
+        replyText = `📖 Về mặt nguyên lý số học nền tảng:\nBản đồ của bạn sở hữu bộ ba cốt lõi Đường Đời ${currentCustomer?.map?.life_path || '-'}, Sứ Mệnh ${currentCustomer?.map?.expression || '-'}, Linh Hồn ${currentCustomer?.map?.heart_desire || '-'}.\n\n💡 Để được phân tích chuyên sâu đa chiều, thấu hiểu điểm nghẽn cá nhân và xây dựng lộ trình chuyển hóa thực tế cho riêng bạn, bạn nên trao đổi trực tiếp 1-1 cùng Chuyên Gia Life Coach.`;
+        showCoachBtn = true;
+      }
+
+      setChatMessages(prev => [...prev, { sender: 'support', text: replyText, showCoachButton: showCoachBtn }]);
+      setIsSupportTyping(false);
+    }, 800);
   };
 
-  const map = customer.map;
-
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 py-8">
-      {/* Header Bản đồ */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 pb-6 border-b border-purple-500/10">
-        <div>
-          <h1 className="text-3xl font-extrabold gold-glow text-amber-400 font-serif mb-2">
-            {customer.last_name} {customer.first_name}
-          </h1>
-          <p className="text-purple-300 font-medium">
-            {t('common.dob')}: {customer.dob} | ID: {customer.id}
-          </p>
-        </div>
-        <div className="flex gap-3 no-print">
-          <button 
-            onClick={() => window.print()}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-900/40 border border-purple-500/30 text-purple-200 hover:bg-purple-800/50 hover:text-white transition-all"
-          >
-            <Printer size={18} />
-            {t('common.printBtn')}
-          </button>
-        </div>
-      </div>
-
-      {/* Grid Hiển thị Các Số Chủ Đạo */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-        {[
-          { key: 'life_path', val: map.life_path, label: t('indicators.life_path'), color: 'border-amber-500/30 text-amber-400' },
-          { key: 'expression', val: map.expression, label: t('indicators.expression'), color: 'border-purple-500/30 text-purple-300' },
-          { key: 'heart_desire', val: map.heart_desire, label: t('indicators.heart_desire'), color: 'border-rose-500/30 text-rose-300' },
-          { key: 'personality', val: map.personality, label: t('indicators.personality'), color: 'border-teal-500/30 text-teal-300' },
-          { key: 'birthday', val: map.birthday, label: t('indicators.birthday'), color: 'border-blue-500/30 text-blue-300' },
-          { key: 'maturity', val: map.maturity, label: t('indicators.maturity'), color: 'border-pink-500/30 text-pink-300' },
-          { key: 'balance', val: map.balance, label: t('indicators.balance'), color: 'border-emerald-500/30 text-emerald-300' },
-          { key: 'subconscious_confidence', val: map.subconscious_confidence, label: t('indicators.subconscious_confidence'), color: 'border-indigo-500/30 text-indigo-300' },
-        ].map((item) => (
-          <div key={item.key} className={`glass-card p-5 rounded-xl border text-center flex flex-col justify-between ${item.color}`}>
-            <span className="text-xs font-bold uppercase tracking-wider opacity-70 mb-2">{item.label}</span>
-            <span className="text-4xl font-extrabold font-serif py-2">{item.val}</span>
+    <div className="w-full max-w-6xl mx-auto space-y-8 text-[#2D3E3A]">
+      {/* 1. DEDUPLICATION BANNER */}
+      {isExistingRecord && (
+        <div className="bg-[#FFEFB3] border border-[#F9E79F] rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-center gap-3.5">
+            <div className="p-2.5 rounded-xl bg-white text-[#013E37] text-2xl border border-[#F9E79F]">
+              📂
+            </div>
+            <div>
+              <div className="text-sm sm:text-base font-bold text-[#013E37] flex items-center gap-2 font-heading">
+                Hồ Sơ Đã Tồn Tại Trong Tài Khoản Của Bạn
+              </div>
+              <div className="text-xs sm:text-sm text-[#5F736E]">
+                Hệ thống tự động nhận diện và khôi phục hồ sơ của <strong className="text-[#013E37]">{fullName}</strong> ({currentCustomer?.dob}). Bạn không bị trừ thêm bất kỳ lượt phân tích nào!
+              </div>
+            </div>
           </div>
-        ))}
-      </div>
-
-      {/* Khối Tabs Luận Giải */}
-      <div className="mb-8 border-b border-purple-500/10 no-print">
-        <div className="flex gap-2">
-          <button
-            onClick={() => setActiveTab('free')}
-            className={`px-5 py-3 font-semibold rounded-t-lg transition-all ${
-              activeTab === 'free'
-                ? 'bg-purple-900/30 text-amber-400 border-b-2 border-amber-400'
-                : 'text-purple-300 hover:text-white hover:bg-purple-950/20'
-            }`}
-          >
-            {t('common.freeTier')}
-          </button>
-          <button
-            onClick={() => setActiveTab('tier1')}
-            className={`px-5 py-3 font-semibold rounded-t-lg transition-all flex items-center gap-2 ${
-              activeTab === 'tier1'
-                ? 'bg-purple-900/30 text-amber-400 border-b-2 border-amber-400'
-                : 'text-purple-300 hover:text-white hover:bg-purple-950/20'
-            }`}
-          >
-            {customer.unlockedTier >= 1 ? <Unlock size={14} className="text-emerald-400" /> : <Lock size={14} />}
-            {t('common.tier1')}
-          </button>
-          <button
-            onClick={() => setActiveTab('tier2')}
-            className={`px-5 py-3 font-semibold rounded-t-lg transition-all flex items-center gap-2 ${
-              activeTab === 'tier2'
-                ? 'bg-purple-900/30 text-amber-400 border-b-2 border-amber-400'
-                : 'text-purple-300 hover:text-white hover:bg-purple-950/20'
-            }`}
-          >
-            {customer.unlockedTier >= 2 ? <Unlock size={14} className="text-emerald-400" /> : <Lock size={14} />}
-            {t('common.tier2')}
-          </button>
+          <span className="shrink-0 px-3 py-1.5 bg-[#013E37] text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-sm">
+            Miễn Phí Khôi Phục
+          </span>
         </div>
-      </div>
+      )}
 
-      {/* Vùng Hiển Thị Nội Dung Luận Giải */}
-      <div className="glass-card p-6 md:p-8 rounded-2xl mb-8">
-        
-        {/* TẢI BÁO CÁO AI */}
-        {loadingAI && (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <RefreshCw className="animate-spin text-amber-400" size={32} />
-            <p className="text-purple-200 animate-pulse">{t('common.loading')}</p>
-          </div>
-        )}
-
-        {aiError && !loadingAI && (
-          <div className="bg-rose-950/30 border border-rose-500/20 p-4 rounded-xl text-rose-300 flex items-center gap-3">
-            <AlertTriangle />
-            <p>{aiError}</p>
-          </div>
-        )}
-
-        {!loadingAI && !aiError && (
+      {/* HEADER PROFILE */}
+      <div className="bg-[#FFFFFF] border border-[#E2E8E5] rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-md">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-[#FFEFB3]/30 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div>
-            {/* TAB MIỄN PHÍ */}
-            {activeTab === 'free' && aiReports[0] && (
-              <div className="space-y-6">
-                <h3 className="text-2xl font-serif font-bold text-amber-400 flex items-center gap-2">
-                  <Sparkles size={20} />
-                  {t('tiers.freeTitle')}
-                </h3>
-                <p className="text-lg leading-relaxed text-purple-100/90 whitespace-pre-line">
-                  {aiReports[0].summary}
-                </p>
-                
-                {/* Paywall CTA */}
-                {customer.unlockedTier < 1 && (
-                  <div className="mt-8 p-6 rounded-xl border border-amber-500/20 bg-amber-500/5 text-center no-print">
-                    <h4 className="text-xl font-bold text-amber-300 mb-2 flex items-center justify-center gap-2">
-                      <Lock size={18} />
-                      {t('common.lockText')} (Tier 1)
-                    </h4>
-                    <p className="text-purple-200 max-w-lg mx-auto mb-4">
-                      Khám phá những chướng ngại vật tiềm tàng, các nợ nghiệp tiêu cực và cách thức tháo gỡ điểm nghẽn trong cuộc sống của bạn.
-                    </p>
-                    <button 
-                      onClick={() => handlePayment(1)}
-                      className="px-6 py-3 rounded-lg bg-amber-500 hover:bg-amber-400 text-purple-950 font-bold transition-all flex items-center gap-2 mx-auto"
-                    >
-                      Mở khóa Tier 1 ($4.99)
-                      <ArrowRight size={16} />
-                    </button>
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-2xl">✨</span>
+              <span className="text-xs font-bold uppercase tracking-widest text-[#267D71]">
+                Bản Đồ Vận Mệnh Pythagoras
+              </span>
+              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                isPaid ? 'badge-butter' : user ? 'badge-emerald' : 'bg-[#EEF5F3] text-[#5F736E] border border-[#E2E8E5]'
+              }`}>
+                {isPaid ? 'VIP B2C Unlocked' : user ? 'Free Member' : 'Khách Vãng Lai (Guest)'}
+              </span>
+            </div>
+            <h1 className="text-3xl sm:text-5xl font-bold font-heading text-[#0D2B26] tracking-tight">
+              {fullName}
+            </h1>
+            <div className="flex flex-wrap items-center gap-4 text-xs sm:text-sm text-[#5F736E] mt-3">
+              <span>Ngày sinh: <strong className="text-[#0D2B26]">{currentCustomer?.dob}</strong></span>
+              <span>•</span>
+              <span>Giới tính: <strong className="text-[#0D2B26]">{currentCustomer?.gender === 'female' ? 'Nữ' : 'Nam'}</strong></span>
+              <span>•</span>
+              <span>Năm cá nhân hiện tại: <strong className="text-[#013E37] font-bold">Số {currentCustomer?.map?.personal_year_current || 9}</strong></span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setIsLeadModalOpen(true)}
+              className="px-5 py-3 rounded-2xl bg-[#EEF5F3] hover:bg-[#E2EFEA] border border-[#267D71]/30 text-[#013E37] text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 shadow-sm"
+            >
+              <UserPlus size={16} className="text-[#267D71]" />
+              <span>Kết Nối Chuyên Gia 1-1</span>
+            </button>
+            <a
+              href={`/report/print?id=${currentCustomer?.id || 'demo'}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-5 py-3 rounded-2xl btn-primary text-xs sm:text-sm font-bold flex items-center gap-2 shadow-sm"
+            >
+              <Printer size={16} />
+              <span>In Bản Đồ / Xuất PDF</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {/* NAVIGATION TABS */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-[#E2E8E5]">
+        <div className="bg-[#FFFFFF] p-1.5 rounded-2xl border border-[#E2E8E5] flex items-center gap-1 shadow-sm">
+          <button
+            onClick={() => setActiveTab('map')}
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+              activeTab === 'map' ? 'bg-[#013E37] text-white shadow-md' : 'text-[#5F736E] hover:text-[#013E37] hover:bg-[#EEF5F3]'
+            }`}
+          >
+            <Compass size={14} />
+            <span>Tầng 1: Chỉ Số Cốt Lõi</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('layer2')}
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+              activeTab === 'layer2' ? 'bg-[#013E37] text-white shadow-md' : 'text-[#5F736E] hover:text-[#013E37] hover:bg-[#EEF5F3]'
+            }`}
+          >
+            <span>Tầng 2: Chi Tiết Con Số</span>
+            {user ? <Unlock size={14} className="text-emerald-500" /> : <Lock size={14} className="text-amber-500" />}
+          </button>
+          <button
+            onClick={() => setActiveTab('layer3')}
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+              activeTab === 'layer3' ? 'bg-[#013E37] text-white shadow-md' : 'text-[#5F736E] hover:text-[#013E37] hover:bg-[#EEF5F3]'
+            }`}
+          >
+            <span>Tầng 3: Luận Giải Đa Chiều</span>
+            {isPaid ? <Unlock size={14} className="text-emerald-500" /> : <Lock size={14} className="text-amber-500" />}
+          </button>
+          <button
+            onClick={() => setActiveTab('support_chat')}
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+              activeTab === 'support_chat' ? 'bg-[#013E37] text-white shadow-md' : 'text-[#5F736E] hover:text-[#013E37] hover:bg-[#EEF5F3]'
+            }`}
+          >
+            <Headphones size={14} />
+            <span>Hỗ Trợ & CSKH</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('pricing')}
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+              activeTab === 'pricing' ? 'bg-[#013E37] text-white shadow-md' : 'text-[#5F736E] hover:text-[#013E37] hover:bg-[#EEF5F3]'
+            }`}
+          >
+            <Sparkles size={14} className="text-[#267D71]" />
+            <span>Gói Nâng Cấp</span>
+          </button>
+        </div>
+      </div>
+
+      {/* TAB 1: TẦNG 1 - 3 CHỈ SỐ CỐT LÕI */}
+      {activeTab === 'map' && (
+        <div className="space-y-6">
+          <div className="bg-[#FFFFFF] border border-[#E2E8E5] rounded-3xl p-6 sm:p-8 shadow-md">
+            <div className="max-w-3xl mb-6">
+              <span className="badge-butter px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider inline-block mb-2">
+                Tầng 1: Định Nghĩa Nền Tảng
+              </span>
+              <h2 className="text-2xl font-bold font-heading text-[#0D2B26]">
+                Bộ 3 Con Số Dẫn Đường Cho Cuộc Đời Bạn
+              </h2>
+              <p className="text-xs sm:text-sm text-[#5F736E] mt-1 leading-relaxed">
+                Mỗi chỉ số trong bản đồ Thần số học Pythagoras nắm giữ một vai trò đại diện thiêng liêng. Dưới đây là 3 con số nền tảng dẫn dắt toàn bộ cuộc đời bạn.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Card 1: Life Path */}
+              <div className="card-surface rounded-3xl p-6 border-2 border-[#267D71]/20 hover:border-[#267D71] transition-all flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#267D71]">Đường Đời (Life Path)</span>
+                    <span className="w-10 h-10 rounded-2xl bg-[#FFEFB3] text-[#013E37] flex items-center justify-center font-extrabold text-lg border border-[#F9E79F]">
+                      {currentCustomer?.map?.life_path}
+                    </span>
                   </div>
-                )}
+                  <h3 className="font-bold text-[#0D2B26] font-heading text-lg mb-2">
+                    {layer1.life_path.name}
+                  </h3>
+                  <p className="text-xs text-[#5F736E] leading-relaxed mb-4">
+                    {layer1.life_path.definition}
+                  </p>
+                </div>
+                <div className="bg-[#EEF5F3] p-3 rounded-2xl text-xs text-[#013E37] border border-[#267D71]/20 font-medium">
+                  💡 {layer1.life_path.hookQuestion}
+                </div>
+              </div>
+
+              {/* Card 2: Expression */}
+              <div className="card-surface rounded-3xl p-6 border border-[#E2E8E5] hover:border-[#267D71]/40 transition-all flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#267D71]">Sứ Mệnh (Destiny)</span>
+                    <span className="w-10 h-10 rounded-2xl bg-[#EEF5F3] text-[#267D71] flex items-center justify-center font-extrabold text-lg border border-[#267D71]/20">
+                      {currentCustomer?.map?.expression}
+                    </span>
+                  </div>
+                  <h3 className="font-bold text-[#0D2B26] font-heading text-lg mb-2">
+                    {layer1.expression.name}
+                  </h3>
+                  <p className="text-xs text-[#5F736E] leading-relaxed mb-4">
+                    {layer1.expression.definition}
+                  </p>
+                </div>
+                <div className="bg-[#FAF8F5] p-3 rounded-2xl text-xs text-[#5F736E] border border-[#E2E8E5]">
+                  💡 {layer1.expression.hookQuestion}
+                </div>
+              </div>
+
+              {/* Card 3: Soul Urge */}
+              <div className="card-surface rounded-3xl p-6 border border-[#E2E8E5] hover:border-[#267D71]/40 transition-all flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#8C6A81]">Linh Hồn (Soul Urge)</span>
+                    <span className="w-10 h-10 rounded-2xl bg-[#FAF8F5] text-[#8C6A81] flex items-center justify-center font-extrabold text-lg border border-[#8C6A81]/30">
+                      {currentCustomer?.map?.heart_desire}
+                    </span>
+                  </div>
+                  <h3 className="font-bold text-[#0D2B26] font-heading text-lg mb-2">
+                    {layer1.heart_desire.name}
+                  </h3>
+                  <p className="text-xs text-[#5F736E] leading-relaxed mb-4">
+                    {layer1.heart_desire.definition}
+                  </p>
+                </div>
+                <div className="bg-[#FAF8F5] p-3 rounded-2xl text-xs text-[#5F736E] border border-[#E2E8E5]">
+                  💡 {layer1.heart_desire.hookQuestion}
+                </div>
+              </div>
+            </div>
+
+            {/* Transition CTA to Layer 2 */}
+            <div className="mt-8 p-6 rounded-3xl bg-[#FAF8F5] border border-[#E2E8E5] flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#FFEFB3] text-[#013E37] flex items-center justify-center text-xl">
+                  🔓
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-[#0D2B26] font-heading">
+                    Khám Phá Chi Tiết Điểm Mạnh, Điểm Yếu & Lời Khuyên Cụ Thể
+                  </div>
+                  <div className="text-xs text-[#5F736E]">
+                    Chuyển sang Tầng 2 để xem phân tích cụ thể các con số của bạn.
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setActiveTab('layer2')}
+                className="px-5 py-2.5 rounded-xl btn-primary text-xs whitespace-nowrap shadow-sm font-bold"
+              >
+                Xem Tầng 2 ➔
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: TẦNG 2 - PHÂN TÍCH CHI TIẾT CON SỐ */}
+      {activeTab === 'layer2' && (
+        <div className="space-y-6">
+          {!user ? (
+            <div className="bg-[#FFFFFF] border border-[#E2E8E5] rounded-3xl p-8 sm:p-12 text-center shadow-md">
+              <div className="max-w-md mx-auto space-y-4">
+                <div className="w-14 h-14 rounded-2xl bg-[#FFEFB3] text-[#013E37] flex items-center justify-center mx-auto text-2xl">
+                  🔒
+                </div>
+                <h2 className="text-2xl font-bold font-heading text-[#0D2B26]">
+                  Đăng Nhập Miễn Phí Để Mở Khóa Tầng 2
+                </h2>
+                <p className="text-xs sm:text-sm text-[#5F736E] leading-relaxed">
+                  Đăng nhập bằng tài khoản Google để xem toàn bộ phân tích chuyên sâu về ưu điểm, bài học phát triển và cơ hội nghề nghiệp của từng chỉ số.
+                </p>
+                <button
+                  onClick={loginWithGoogle}
+                  className="px-6 py-3 rounded-2xl btn-primary text-sm font-bold inline-flex items-center gap-2 shadow-md mt-2"
+                >
+                  <UserCheck size={18} />
+                  <span>Đăng Nhập Ngay Bằng Google (Miễn Phí)</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="bg-[#FFFFFF] border border-[#E2E8E5] rounded-3xl p-6 sm:p-8 shadow-md">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <span className="badge-butter px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider inline-block mb-1">
+                      Tầng 2: Luận Giải Chi Tiết
+                    </span>
+                    <h2 className="text-2xl font-bold font-heading text-[#0D2B26]">
+                      Bản Sắc & Năng Lực Con Số Của Bạn
+                    </h2>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  {/* Detailed Life Path */}
+                  <div className="p-6 rounded-3xl bg-[#FAF8F5] border border-[#E2E8E5]">
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className="w-8 h-8 rounded-xl bg-[#013E37] text-white flex items-center justify-center text-sm font-bold font-heading">
+                        {currentCustomer?.map?.life_path}
+                      </span>
+                      <h3 className="text-lg font-bold font-heading text-[#0D2B26]">
+                        {layer2.lifePathAnalysis.title}
+                      </h3>
+                    </div>
+                    <p className="text-sm text-[#2D3E3A] leading-relaxed mb-4">
+                      {layer2.lifePathAnalysis.content}
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="p-4 rounded-2xl bg-white border border-[#E2E8E5]">
+                        <div className="text-xs font-bold text-[#267D71] uppercase mb-2">Thế Mạnh Nổi Bật</div>
+                        <ul className="space-y-1 text-xs text-[#5F736E]">
+                          {layer2.lifePathAnalysis.strengths.map((s: string, idx: number) => (
+                            <li key={idx} className="flex items-center gap-2">
+                              <Check size={14} className="text-[#267D71]" />
+                              <span>{s}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="p-4 rounded-2xl bg-white border border-[#E2E8E5]">
+                        <div className="text-xs font-bold text-amber-700 uppercase mb-2">Bài Học Cần Rèn Luyện</div>
+                        <ul className="space-y-1 text-xs text-[#5F736E]">
+                          {layer2.lifePathAnalysis.weaknesses.map((w: string, idx: number) => (
+                            <li key={idx} className="flex items-center gap-2">
+                              <AlertCircle size={14} className="text-amber-600" />
+                              <span>{w}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Detailed Expression & Soul Urge */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="p-6 rounded-3xl bg-[#FAF8F5] border border-[#E2E8E5]">
+                      <div className="text-xs font-bold uppercase text-[#267D71] mb-1">
+                        Sứ Mệnh Số {currentCustomer?.map?.expression}
+                      </div>
+                      <h4 className="font-bold text-[#0D2B26] font-heading text-base mb-2">
+                        {layer2.expressionAnalysis.title}
+                      </h4>
+                      <p className="text-xs text-[#5F736E] leading-relaxed">
+                        {layer2.expressionAnalysis.content}
+                      </p>
+                    </div>
+
+                    <div className="p-6 rounded-3xl bg-[#FAF8F5] border border-[#E2E8E5]">
+                      <div className="text-xs font-bold uppercase text-[#8C6A81] mb-1">
+                        Linh Hồn Số {currentCustomer?.map?.heart_desire}
+                      </div>
+                      <h4 className="font-bold text-[#0D2B26] font-heading text-base mb-2">
+                        {layer2.heartDesireAnalysis.title}
+                      </h4>
+                      <p className="text-xs text-[#5F736E] leading-relaxed">
+                        {layer2.heartDesireAnalysis.content}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Transition to Layer 3 */}
+              <div className="bg-[#FFEFB3] border border-[#F9E79F] rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+                <div>
+                  <div className="text-sm font-bold text-[#013E37] font-heading">
+                    Muốn biết các con số trên tương tác với nhau như thế nào?
+                  </div>
+                  <div className="text-xs text-[#5F736E] mt-0.5">
+                    Mở khóa Tầng 3 để hệ thống phân tích ma trận chéo, nợ nghiệp và lộ trình hành động độc bản của bạn!
+                  </div>
+                </div>
+                <button
+                  onClick={() => setActiveTab('layer3')}
+                  className="px-5 py-2.5 rounded-xl btn-primary text-xs whitespace-nowrap shadow-sm font-bold"
+                >
+                  Khám Phá Tầng 3 ➔
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 3: TẦNG 3 - LUẬN GIẢI ĐA CHIỀU (DÀNH CHO PAID USER) */}
+      {activeTab === 'layer3' && (
+        <div className="space-y-6">
+          {!isPaid ? (
+            <div className="relative rounded-3xl overflow-hidden border border-[#E2E8E5] bg-[#FFFFFF] p-8 sm:p-12 text-center shadow-md">
+              <div className="max-w-2xl mx-auto space-y-6">
+                <div className="inline-flex p-3.5 rounded-2xl bg-[#FFEFB3] text-[#013E37] text-3xl shadow-sm">
+                  ✨
+                </div>
+                <h2 className="text-2xl sm:text-4xl font-bold font-heading text-[#0D2B26]">
+                  Tầng 3: Luận Giải Đa Chiều Độc Bản
+                </h2>
+                <p className="text-[#5F736E] text-sm sm:text-base leading-relaxed">
+                  Tầng 3 không dùng các đoạn văn mẫu cố định mà kết nối chéo giữa <strong className="text-[#013E37]">Đường đời {currentCustomer?.map?.life_path}</strong>, <strong className="text-[#267D71]">Sứ mệnh {currentCustomer?.map?.expression}</strong>, và <strong className="text-[#8C6A81]">Linh hồn {currentCustomer?.map?.heart_desire}</strong> để giải mã điểm nghẽn, nợ nghiệp và chiến lược thành công độc nhất cho bạn.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left pt-2">
+                  <div className="bg-[#FAF8F5] p-5 rounded-2xl border border-[#E2E8E5]">
+                    <div className="text-[#267D71] text-xl mb-1.5">🧩</div>
+                    <div className="font-bold text-xs text-[#0D2B26] font-heading">Ma Trận Tương Tác</div>
+                    <div className="text-xs text-[#5F736E] mt-1">Phân tích sự phối hợp giữa khao khát bên trong và năng lực bên ngoài.</div>
+                  </div>
+                  <div className="bg-[#FAF8F5] p-5 rounded-2xl border border-[#E2E8E5]">
+                    <div className="text-[#8C6A81] text-xl mb-1.5">⚖️</div>
+                    <div className="font-bold text-xs text-[#0D2B26] font-heading">Nợ Nghiệp & Thử Thách</div>
+                    <div className="text-xs text-[#5F736E] mt-1">Chỉ rõ bài học quá khứ cần hoàn thành để bứt phá tài chính và công danh.</div>
+                  </div>
+                  <div className="bg-[#FAF8F5] p-5 rounded-2xl border border-[#E2E8E5]">
+                    <div className="text-[#013E37] text-xl mb-1.5">🗺️</div>
+                    <div className="font-bold text-xs text-[#0D2B26] font-heading">Lộ Trình Hành Động</div>
+                    <div className="text-xs text-[#5F736E] mt-1">Kế hoạch 3 bước cụ thể và dự báo chiến lược cho từng tháng.</div>
+                  </div>
+                </div>
+
+                <div className="pt-4">
+                  <button
+                    onClick={() => setActiveTab('pricing')}
+                    className="px-8 py-4 rounded-2xl btn-primary text-base font-bold shadow-lg transition-all inline-flex items-center gap-3"
+                  >
+                    <span>🚀 Mở Khóa Tầng 3 Ngay - 200.000 đ</span>
+                  </button>
+                  <div className="text-xs text-[#93A39F] mt-2.5">
+                    Thanh toán 1 lần duy nhất • Mở khóa vĩnh viễn • Xuất Ebook PDF 30+ trang
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="bg-[#EEF5F3] border border-[#267D71]/30 rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <span className="text-[#267D71] text-xs font-bold uppercase tracking-wider font-heading">TẦNG 3: LUẬN GIẢI ĐA CHIỀU CHUYÊN SÂU (VIP UNLOCKED)</span>
+                  <h2 className="text-xl sm:text-2xl font-bold font-heading text-[#0D2B26] mt-1">Bản Báo Cáo Chuyên Sâu Của {fullName}</h2>
+                </div>
+                <a
+                  href={`/report/print?id=${currentCustomer?.id || 'demo'}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-5 py-2.5 rounded-xl btn-primary text-xs font-bold flex items-center gap-2 shadow-sm self-start sm:self-auto"
+                >
+                  <Printer size={14} />
+                  <span>Xem Bản In Chuẩn A4</span>
+                </a>
+              </div>
+
+              {/* 3 Blocks of Layer 3 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-[#FFFFFF] border border-[#E2E8E5] rounded-3xl p-6 sm:p-8 shadow-md">
+                  <div className="w-10 h-10 rounded-2xl bg-[#EEF5F3] text-[#267D71] flex items-center justify-center text-xl mb-4 border border-[#267D71]/20">
+                    🧩
+                  </div>
+                  <h3 className="text-lg font-bold font-heading text-[#0D2B26] mb-3">1. Ma Trận Năng Lượng Đa Chiều</h3>
+                  <p className="text-xs sm:text-sm text-[#2D3E3A] whitespace-pre-line leading-relaxed">
+                    {layer3.crossSynthesis}
+                  </p>
+                </div>
+
+                <div className="bg-[#FFFFFF] border border-[#E2E8E5] rounded-3xl p-6 sm:p-8 shadow-md">
+                  <div className="w-10 h-10 rounded-2xl bg-[#FAF8F5] text-[#8C6A81] flex items-center justify-center text-xl mb-4 border border-[#8C6A81]/30">
+                    ⚖️
+                  </div>
+                  <h3 className="text-lg font-bold font-heading text-[#0D2B26] mb-3">2. Nợ Nghiệp & Điểm Nghẽn Tiến Hóa</h3>
+                  <div className="space-y-3 text-xs sm:text-sm text-[#2D3E3A] leading-relaxed">
+                    <p>{layer3.challenges.obstacles}</p>
+                    <div className="p-3.5 bg-[#FAF8F5] rounded-2xl border border-[#E2E8E5] text-[#8C6A81] font-medium">
+                      {layer3.challenges.karmicLessons}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-[#FFFFFF] border border-[#E2E8E5] rounded-3xl p-6 sm:p-8 shadow-md">
+                <div className="w-10 h-10 rounded-2xl bg-[#FFEFB3] text-[#013E37] flex items-center justify-center text-xl mb-4 border border-[#F9E79F]">
+                  🗺️
+                </div>
+                <h3 className="text-lg font-bold font-heading text-[#0D2B26] mb-3">3. Lộ Trình Hành Động Chuyển Hóa</h3>
+                <div className="space-y-4 text-xs sm:text-sm text-[#2D3E3A] leading-relaxed">
+                  <div className="p-4 bg-[#FAF8F5] rounded-2xl border border-[#E2E8E5]">
+                    <strong className="text-[#013E37]">Kế hoạch hành động 3 bước:</strong>
+                    <p className="whitespace-pre-line mt-1">{layer3.actionRoadmap.actionPlan}</p>
+                  </div>
+                  <div className="p-4 bg-[#EEF5F3] rounded-2xl border border-[#267D71]/20">
+                    <strong className="text-[#0D2B26]">Định hướng nghề nghiệp đỉnh cao:</strong> {layer3.actionRoadmap.careerGuide}
+                  </div>
+                  <div className="bg-[#FFEFB3] p-4 rounded-2xl border border-[#F9E79F] text-[#013E37] font-semibold">
+                    {layer3.actionRoadmap.personalYear}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 4: HỖ TRỢ & CSKH (TUÂN THỦ HIẾN PHÁP DỰ ÁN) */}
+      {activeTab === 'support_chat' && (
+        <div className="bg-[#FFFFFF] border border-[#E2E8E5] rounded-3xl p-6 sm:p-8 shadow-md flex flex-col h-[580px]">
+          <div className="border-b border-[#E2E8E5] pb-4 mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-[#EEF5F3] text-[#013E37] flex items-center justify-center text-xl shadow-sm border border-[#267D71]/20">
+                <Headphones size={20} className="text-[#267D71]" />
+              </div>
+              <div>
+                <h3 className="font-bold text-[#0D2B26] font-heading text-base">Bộ Phận Hỗ Trợ Khách Hàng Life Maps</h3>
+                <p className="text-xs text-[#5F736E]">Hỗ trợ kỹ thuật, hướng dẫn thao tác & kết nối chuyên gia</p>
+              </div>
+            </div>
+            <span className="px-3 py-1 bg-[#EEF5F3] text-[#267D71] text-xs rounded-full border border-[#267D71]/30 font-bold">
+              ● Trực Tuyến 24/7
+            </span>
+          </div>
+
+          {/* Messages list */}
+          <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+            {chatMessages.map((msg, idx) => (
+              <div
+                key={idx}
+                className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-[85%] rounded-2xl p-4 text-sm leading-relaxed ${
+                    msg.sender === 'user'
+                      ? 'bg-[#013E37] text-white font-medium rounded-br-none shadow-sm'
+                      : 'bg-[#FAF8F5] text-[#2D3E3A] border border-[#E2E8E5] rounded-bl-none shadow-sm whitespace-pre-line'
+                  }`}
+                >
+                  <div>{msg.text}</div>
+                  
+                  {/* Chuyển giao Chuyên gia Life Coach */}
+                  {msg.showCoachButton && (
+                    <div className="mt-3 pt-3 border-t border-[#E2E8E5]/70 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                      <span className="text-xs text-[#5F736E] italic">Cần khai vấn 1-1 chuyên sâu?</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsLeadModalOpen(true)}
+                        className="px-3.5 py-1.5 rounded-xl btn-primary text-xs font-bold flex items-center gap-1.5 shadow-sm"
+                      >
+                        <UserPlus size={13} />
+                        <span>Đặt Lịch Cùng Chuyên Gia 1-1</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+            {isSupportTyping && (
+              <div className="flex justify-start">
+                <div className="bg-[#FAF8F5] p-3 rounded-2xl text-xs text-[#5F736E] italic flex items-center gap-2 border border-[#E2E8E5]">
+                  <span className="animate-spin">🌀</span> Đang tra cứu cơ sở dữ liệu hướng dẫn...
+                </div>
               </div>
             )}
-
-            {/* TAB TIER 1 - CHALLENGES */}
-            {activeTab === 'tier1' && (
-              customer.unlockedTier >= 1 ? (
-                aiReports[1] && (
-                  <div className="space-y-8">
-                    <h3 className="text-2xl font-serif font-bold text-amber-400 flex items-center gap-2">
-                      <AlertTriangle size={20} className="text-rose-400" />
-                      {t('tiers.tier1Title')}
-                    </h3>
-                    
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="p-5 rounded-xl bg-purple-950/20 border border-purple-500/10">
-                        <h4 className="text-lg font-bold text-purple-200 mb-3 flex items-center gap-2">
-                          <CheckCircle size={16} className="text-purple-400" />
-                          Phân Tích Cốt Lõi
-                        </h4>
-                        <p className="text-purple-100/80 leading-relaxed whitespace-pre-line">
-                          {aiReports[1].coreAnalysis?.lifePath}
-                        </p>
-                      </div>
-                      <div className="p-5 rounded-xl bg-purple-950/20 border border-purple-500/10">
-                        <h4 className="text-lg font-bold text-purple-200 mb-3 flex items-center gap-2">
-                          <AlertTriangle size={16} className="text-rose-400" />
-                          Thách Thức Hiện Tại
-                        </h4>
-                        <p className="text-purple-100/80 leading-relaxed whitespace-pre-line">
-                          {aiReports[1].challenges?.currentChallenge}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="p-5 rounded-xl bg-rose-950/10 border border-rose-500/10">
-                      <h4 className="text-lg font-bold text-rose-300 mb-3 flex items-center gap-2">
-                        Bài Học Nghiệp (Nợ nghiệp {map.karmic_lessons.join(', ')})
-                      </h4>
-                      <p className="text-purple-100/80 leading-relaxed whitespace-pre-line">
-                        {aiReports[1].challenges?.karmicLessons}
-                      </p>
-                    </div>
-
-                    {/* Paywall CTA to Tier 2 */}
-                    {customer.unlockedTier < 2 && (
-                      <div className="p-6 rounded-xl border border-amber-500/20 bg-amber-500/5 text-center no-print">
-                        <h4 className="text-xl font-bold text-amber-300 mb-2 flex items-center justify-center gap-2">
-                          <Lock size={18} />
-                          Nâng cấp lên Tier 2 - Nhận Giải Pháp Hoàn Chỉnh
-                        </h4>
-                        <p className="text-purple-200 max-w-lg mx-auto mb-4">
-                          Nhận kế hoạch hành động chi tiết từ AI, định hướng nghề nghiệp lý tưởng và mở khóa chức năng trò chuyện trực tiếp với Trợ lý AI Coach.
-                        </p>
-                        <button 
-                          onClick={() => handlePayment(2)}
-                          className="px-6 py-3 rounded-lg bg-amber-500 hover:bg-amber-400 text-purple-950 font-bold transition-all flex items-center gap-2 mx-auto"
-                        >
-                          Nâng Cấp Lên Tier 2 ($14.99)
-                          <Sparkles size={16} />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )
-              ) : (
-                <div className="text-center py-16 no-print">
-                  <Lock size={48} className="mx-auto text-purple-400 mb-4 opacity-50" />
-                  <h3 className="text-2xl font-bold text-purple-200 mb-2">{t('common.lockText')}</h3>
-                  <p className="text-purple-300/70 max-w-md mx-auto mb-6">
-                    Báo cáo phân tích thách thức lớn và nợ nghiệp hiện đang bị khóa. Mở khóa ngay để nhận diện vấn đề.
-                  </p>
-                  <button 
-                    onClick={() => handlePayment(1)}
-                    className="px-6 py-3 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold transition-all"
-                  >
-                    Mở khóa ngay ($4.99)
-                  </button>
-                </div>
-              )
-            )}
-
-            {/* TAB TIER 2 - SOLUTIONS & AI CHAT */}
-            {activeTab === 'tier2' && (
-              customer.unlockedTier >= 2 ? (
-                aiReports[2] && (
-                  <div className="space-y-8">
-                    <h3 className="text-2xl font-serif font-bold text-amber-400 flex items-center gap-2">
-                      <Sparkles size={20} className="text-amber-400" />
-                      {t('tiers.tier2Title')}
-                    </h3>
-
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="p-5 rounded-xl bg-purple-950/20 border border-purple-500/10">
-                        <h4 className="text-lg font-bold text-amber-300 mb-3 flex items-center gap-2">
-                          <CheckCircle size={16} className="text-amber-400" />
-                          Kế Hoạch Hành Động
-                        </h4>
-                        <p className="text-purple-100/80 leading-relaxed whitespace-pre-line">
-                          {aiReports[2].solutions?.actionPlan}
-                        </p>
-                      </div>
-                      <div className="p-5 rounded-xl bg-purple-950/20 border border-purple-500/10">
-                        <h4 className="text-lg font-bold text-amber-300 mb-3 flex items-center gap-2">
-                          <BookOpen size={16} className="text-amber-400" />
-                          Định Hướng Sự Nghiệp
-                        </h4>
-                        <p className="text-purple-100/80 leading-relaxed whitespace-pre-line">
-                          {aiReports[2].solutions?.careerGuide}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="p-5 rounded-xl bg-indigo-950/20 border border-indigo-500/10">
-                      <h4 className="text-lg font-bold text-indigo-300 mb-3 flex items-center gap-2">
-                        Dự báo năm cá nhân và Lời khuyên
-                      </h4>
-                      <p className="text-purple-100/80 leading-relaxed whitespace-pre-line">
-                        {aiReports[2].solutions?.personalYearAdvice}
-                      </p>
-                    </div>
-
-                    {/* Khung Chat Trợ Lý AI (AI Coach Chat) */}
-                    <div className="mt-10 border-t border-purple-500/10 pt-8 no-print">
-                      <h4 className="text-xl font-bold text-purple-200 mb-4 flex items-center gap-2">
-                        <MessageCircle className="text-purple-400" />
-                        Trò Chuyện Trực Tiếp Với Trợ Lý Số Học AI của Bạn
-                      </h4>
-                      <p className="text-xs text-purple-300/70 mb-4">
-                        Đặt các câu hỏi như: "Làm sao để tôi phát huy tối đa Sứ mệnh 4?", "Năm nay tôi nên làm gì?", hay "Khắc phục nợ nghiệp 8 bằng cách nào?".
-                      </p>
-                      
-                      {/* Box tin nhắn */}
-                      <div className="bg-black/40 border border-purple-500/10 rounded-xl h-80 flex flex-col justify-between overflow-hidden">
-                        <div className="p-4 overflow-y-auto space-y-4 flex-1">
-                          {chatMessages.length === 0 && (
-                            <p className="text-center text-purple-300/50 my-auto text-sm italic">
-                              Hộp thư trống. Hãy bắt đầu câu hỏi đầu tiên của bạn...
-                            </p>
-                          )}
-                          {chatMessages.map((msg, idx) => (
-                            <div key={idx} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                              <div className={`p-3 rounded-xl max-w-md text-sm ${
-                                msg.sender === 'user' 
-                                  ? 'bg-purple-600 text-white rounded-tr-none' 
-                                  : 'bg-purple-950/50 border border-purple-500/20 text-purple-100 rounded-tl-none'
-                              }`}>
-                                {msg.text}
-                              </div>
-                            </div>
-                          ))}
-                          {sendingChat && (
-                            <div className="flex justify-start">
-                              <div className="p-3 rounded-xl bg-purple-950/50 border border-purple-500/20 text-purple-300 text-sm animate-pulse rounded-tl-none">
-                                AI Coach đang phân tích dữ liệu...
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Input chat */}
-                        <form onSubmit={handleSendMessage} className="p-3 border-t border-purple-500/10 bg-purple-950/20 flex gap-2">
-                          <input
-                            type="text"
-                            value={inputMessage}
-                            onChange={(e) => setInputMessage(e.target.value)}
-                            placeholder="Nhập câu hỏi của bạn tại đây..."
-                            className="flex-1 bg-black/50 border border-purple-500/20 rounded-lg px-4 py-2 text-sm text-purple-100 focus:outline-none focus:border-purple-500"
-                            disabled={sendingChat}
-                          />
-                          <button
-                            type="submit"
-                            className="p-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition-all disabled:opacity-50"
-                            disabled={sendingChat || !inputMessage.trim()}
-                          >
-                            <Send size={16} />
-                          </button>
-                        </form>
-                      </div>
-                    </div>
-                  </div>
-                )
-              ) : (
-                <div className="text-center py-16 no-print">
-                  <Lock size={48} className="mx-auto text-purple-400 mb-4 opacity-50" />
-                  <h3 className="text-2xl font-bold text-purple-200 mb-2">Chưa Mở Khóa Giải Pháp (Tier 2)</h3>
-                  <p className="text-purple-300/70 max-w-md mx-auto mb-6">
-                    Báo cáo kế hoạch giải pháp chi tiết và tính năng trò chuyện trực tuyến với AI Coach hiện đang bị khóa.
-                  </p>
-                  <button 
-                    onClick={() => handlePayment(2)}
-                    className="px-6 py-3 rounded-lg bg-amber-500 hover:bg-amber-400 text-purple-950 font-bold transition-all"
-                  >
-                    Mở khóa trọn gói ($14.99)
-                  </button>
-                </div>
-              )
-            )}
-
           </div>
-        )}
-      </div>
+
+          {/* Chat input */}
+          <form onSubmit={handleSendMessage} className="mt-4 flex gap-2 pt-3 border-t border-[#E2E8E5]">
+            <input
+              type="text"
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              placeholder="Hỏi về cách thanh toán, xuất file PDF, hoặc định nghĩa các con số..."
+              className="flex-1 bg-[#FAF8F5] border border-[#E2E8E5] rounded-2xl px-4 py-3 text-sm text-[#2D3E3A] focus:outline-none focus:border-[#267D71] focus:ring-1 focus:ring-[#267D71] transition-all"
+            />
+            <button
+              type="submit"
+              disabled={isSupportTyping || !inputMessage.trim()}
+              className="px-6 py-3 btn-primary disabled:opacity-50 text-sm rounded-2xl transition-all shadow-sm font-bold"
+            >
+              Gửi
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* TAB 5: PRICING SECTION */}
+      {activeTab === 'pricing' && (
+        <PricingSection
+          customerId={currentCustomer?.id}
+          onPaymentSuccess={() => {
+            if (onRefresh) onRefresh();
+            setActiveTab('layer3');
+          }}
+        />
+      )}
+
+      {/* LEAD REQUEST MODAL */}
+      <LeadRequestModal
+        isOpen={isLeadModalOpen}
+        onClose={() => setIsLeadModalOpen(false)}
+        customerId={currentCustomer?.id}
+        defaultFullName={fullName}
+      />
     </div>
   );
-};
+}
+
+export default ReportDashboard;

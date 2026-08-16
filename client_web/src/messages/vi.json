@@ -1,6 +1,6 @@
 {
   "common": {
-    "title": "Bản Đồ Thần Số Học Pythagoras",
+    "title": "Life Maps - Bản Đồ Thần Số Học Pythagoras",
     "subtitle": "Khám phá bản sắc cuộc đời và giải pháp phát triển bản thân dưới góc nhìn tâm lý học khoa học",
     "fullName": "Họ và Tên",
     "dob": "Ngày Sinh",
@@ -8,7 +8,7 @@
     "loading": "Đang tính toán...",
     "freeTier": "Miễn Phí",
     "tier1": "Tier 1 - Khám Phá Thách Thức",
-    "tier2": "Tier 2 - Giải Pháp & AI Coach",
+    "tier2": "Tier 2 - Giải Pháp & Lộ Trình",
     "unlocked": "Đã mở khóa",
     "lockText": "Mở khóa phân tích sâu",
     "printBtn": "In Bản Đồ / Xuất PDF",
@@ -51,8 +51,8 @@
   "tiers": {
     "freeTitle": "Khái Quát Bản Sắc Cốt Lõi",
     "tier1Title": "Các Điểm Nghẽn & Thách Thức Lớn",
-    "tier2Title": "Bản Đồ Hành Động & Trợ Lý AI",
+    "tier2Title": "Bản Đồ Hành Động Chuyển Hóa",
     "solutionsTitle": "Định Hướng Giải Pháp & Nghề Nghiệp",
-    "solutionsDesc": "Lộ trình chi tiết được Gemini AI thiết kế dựa trên sự phối hợp đa chỉ số của riêng bạn."
+    "solutionsDesc": "Lộ trình chi tiết được hệ thống thiết kế dựa trên sự phối hợp đa chỉ số của riêng bạn."
   }
 }
