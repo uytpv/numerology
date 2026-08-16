@@ -4,7 +4,7 @@
     "indexes": "firestore.indexes.json"
   },
   "hosting": {
-    "site": "numerology-330e9",
+    "site": "lifemaps",
     "public": "client_web/out",
     "ignore": [
       "firebase.json",
