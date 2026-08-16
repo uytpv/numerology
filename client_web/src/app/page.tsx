@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
-import { calculateNumerologyMap } from '@/lib/numerologyReportGenerator';
+import { calculateNumerologyMap, formatTitleCase } from '@/lib/numerologyReportGenerator';
 import { Sparkles, Compass, Briefcase, User, Calendar, ShieldCheck, Heart, Baby, Globe, ArrowRight } from 'lucide-react';
 
 export default function HomePage() {
@@ -81,8 +81,8 @@ export default function HomePage() {
 
   const handleCalculate = async (e: React.FormEvent) => {
     e.preventDefault();
-    const lastName = lastNameInput.trim();
-    const firstName = firstNameInput.trim();
+    const lastName = formatTitleCase(lastNameInput);
+    const firstName = formatTitleCase(firstNameInput);
     const dobFormatted = dobInput.trim();
 
     if (!lastName || !firstName || !dobFormatted || !genderInput) {

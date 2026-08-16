@@ -61,10 +61,15 @@ body {
 }
 
 /* Heading Typography */
-h1, h2, h3, .font-heading {
+h1, h2, h3 {
   font-family: var(--font-heading), var(--font-serif), serif;
   color: var(--text-heading);
 }
+
+.font-heading {
+  font-family: var(--font-heading), var(--font-serif), serif;
+}
+
 
 /* Card & Surface Classes */
 .glass-card, .card-surface {

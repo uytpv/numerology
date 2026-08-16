@@ -5,6 +5,15 @@
  * Tầng 3: Luận giải đa chiều cá nhân hóa độc bản (Dynamic Synthesis - Dành cho Paid User)
  */
 
+export function formatTitleCase(str: string): string {
+  if (!str) return '';
+  return str
+    .trim()
+    .split(/\s+/)
+    .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : ''))
+    .join(' ');
+}
+
 export interface IndicatorDefinition {
   name: string;
   code: string;
@@ -171,11 +180,89 @@ const VOWELS = new Set(['A', 'E', 'I', 'O', 'U']);
 
 function reduceNumber(num: number, keepMaster = true): number {
   if (keepMaster && (num === 11 || num === 22 || num === 33)) return num;
-  while (num > 9) {
-    if (keepMaster && (num === 11 || num === 22 || num === 33)) return num;
-    num = num.toString().split('').reduce((sum, d) => sum + parseInt(d, 10), 0);
+  let current = num;
+  while (current > 9) {
+    if (keepMaster && (current === 11 || current === 22 || current === 33)) return current;
+    current = current.toString().split('').reduce((sum, d) => sum + parseInt(d, 10), 0);
+    if (keepMaster && (current === 11 || current === 22 || current === 33)) return current;
   }
-  return num;
+  return current;
+}
+
+function getFinalTwoDigitBreakdown(rawSum: number, keepMaster = true): { value: number; breakdown: string } {
+  // Số Master 11, 22, 33: KHÔNG hiển thị tổng 2 số ở lượt cộng cuối
+  if (keepMaster && (rawSum === 11 || rawSum === 22 || rawSum === 33)) {
+    return { value: rawSum, breakdown: '' };
+  }
+
+  let current = rawSum;
+  if (current < 10) {
+    return { value: current, breakdown: '' };
+  }
+
+  let lastAddition = '';
+  while (current > 9) {
+    if (keepMaster && (current === 11 || current === 22 || current === 33)) {
+      return { value: current, breakdown: '' };
+    }
+    const digits = current.toString().split('').map(d => parseInt(d, 10));
+    
+    // Nếu phép cộng chứa số 0 (ví dụ 10 -> 1+0, 20 -> 2+0, 30 -> 3+0...) thì KHÔNG hiển thị breakdown
+    if (digits.includes(0)) {
+      lastAddition = '';
+    } else {
+      lastAddition = digits.join('+');
+    }
+
+    current = digits.reduce((sum, d) => sum + d, 0);
+  }
+
+  if (keepMaster && (current === 11 || current === 22 || current === 33)) {
+    return { value: current, breakdown: '' };
+  }
+
+  return {
+    value: current,
+    breakdown: lastAddition ? `(${lastAddition})` : '',
+  };
+}
+
+function getWordBreakdown(word: string): { totalSum: number; reduced: number; vowelSum: number; vowelReduced: number; consonantSum: number; consonantReduced: number } {
+  const cleanWord = word.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z]/g, '');
+  let totalSum = 0;
+  let vowelSum = 0;
+  let consonantSum = 0;
+
+  for (let i = 0; i < cleanWord.length; i++) {
+    const char = cleanWord[i];
+    const val = PYTHAGOREAN_MAP[char] || 0;
+    totalSum += val;
+
+    let isVowel = VOWELS.has(char);
+    // Special treatment for Y
+    if (char === 'Y') {
+      if (i === 0) isVowel = false;
+      else {
+        const prevChar = cleanWord[i - 1];
+        isVowel = !VOWELS.has(prevChar);
+      }
+    }
+
+    if (isVowel) {
+      vowelSum += val;
+    } else {
+      consonantSum += val;
+    }
+  }
+
+  return {
+    totalSum,
+    reduced: reduceNumber(totalSum, true),
+    vowelSum,
+    vowelReduced: reduceNumber(vowelSum, true),
+    consonantSum,
+    consonantReduced: reduceNumber(consonantSum, true),
+  };
 }
 
 export function calculateNumerologyMap(fullName: string, dob: string) {
@@ -198,86 +285,200 @@ export function calculateNumerologyMap(fullName: string, dob: string) {
     year = parseInt(p[2], 10);
   }
 
+  // 1. ĐƯỜNG ĐỜI (LIFE PATH)
   const dR = reduceNumber(day, true);
   const mR = reduceNumber(month, true);
   const yR = reduceNumber(year, true);
-  const lifePath = reduceNumber(dR + mR + yR, true);
+  const rawLp = dR + mR + yR;
+  const lpObj = getFinalTwoDigitBreakdown(rawLp, true);
 
-  const cleanName = fullName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z]/g, '');
+  // 2. SỨ MỆNH (EXPRESSION), LINH HỒN, NHÂN CÁCH
+  const words = fullName.trim().split(/\s+/).filter(Boolean);
+  const wordDetails = words.map(getWordBreakdown);
 
-  let expressionSum = 0;
-  let soulSum = 0;
-  let personalitySum = 0;
+  // Expression: Tổng các từ rút gọn
+  const expComponents = wordDetails.map(w => w.reduced);
+  const expSum = expComponents.reduce((a, b) => a + b, 0);
+  const expObj = getFinalTwoDigitBreakdown(expSum, true);
 
-  for (let i = 0; i < cleanName.length; i++) {
-    const char = cleanName[i];
-    const val = PYTHAGOREAN_MAP[char] || 0;
-    expressionSum += val;
-    if (VOWELS.has(char)) {
-      soulSum += val;
-    } else {
-      personalitySum += val;
-    }
+  // Heart Desire: Tổng nguyên âm
+  const hdComponents = wordDetails.map(w => w.vowelReduced).filter(v => v > 0);
+  const hdSum = hdComponents.reduce((a, b) => a + b, 0);
+  const hdObj = getFinalTwoDigitBreakdown(hdSum, true);
+
+  // Personality: Tổng phụ âm
+  const perComponents = wordDetails.map(w => w.consonantReduced).filter(v => v > 0);
+  const perSum = perComponents.reduce((a, b) => a + b, 0);
+  const perObj = getFinalTwoDigitBreakdown(perSum, true);
+
+  // Balance (Cân bằng)
+  const firstLetters = words.map(w => {
+    const clean = w.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z]/g, '');
+    return clean[0] || '';
+  }).filter(Boolean);
+  const balComponents = firstLetters.map(c => PYTHAGOREAN_MAP[c] || 0);
+  const balSum = balComponents.reduce((a, b) => a + b, 0);
+  const balObj = getFinalTwoDigitBreakdown(balSum, true);
+
+  // Ngày sinh, Thái độ, Trưởng thành, Tư duy lý trí
+  const birthdayObj = getFinalTwoDigitBreakdown(day, true);
+  const attObj = getFinalTwoDigitBreakdown(dR + mR, true);
+
+  const firstNameDetails = wordDetails[wordDetails.length - 1] || { reduced: 1 };
+  const ratObj = getFinalTwoDigitBreakdown(dR + firstNameDetails.reduced, true);
+
+  const matObj = getFinalTwoDigitBreakdown(lpObj.value + expObj.value, true);
+
+  const currentYear = new Date().getFullYear();
+  const personalYear = reduceNumber(dR + mR + reduceNumber(currentYear, false), false);
+
+  // Karmic lessons
+  const cleanAllChars = fullName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z]/g, '');
+  const presentDigits = new Set(cleanAllChars.split('').map(c => PYTHAGOREAN_MAP[c]));
+  const missingDigits: number[] = [];
+  for (let d = 1; d <= 9; d++) {
+    if (!presentDigits.has(d)) missingDigits.push(d);
   }
 
-  const expression = reduceNumber(expressionSum, true);
-  const heartDesire = reduceNumber(soulSum, true);
-  const personality = reduceNumber(personalitySum, true);
-  const birthday = reduceNumber(day, false);
-  const attitude = reduceNumber(day + month, false);
-  const currentYear = new Date().getFullYear();
-  const personalYear = reduceNumber(day + month + reduceNumber(currentYear, false), false);
-
   return {
-    life_path: lifePath,
-    expression,
-    heart_desire: heartDesire,
-    personality,
-    birthday,
-    attitude,
+    life_path: lpObj.value,
+    expression: expObj.value,
+    heart_desire: hdObj.value,
+    personality: perObj.value,
+    birthday: birthdayObj.value,
+    attitude: attObj.value,
+    balance: balObj.value,
+    maturity: matObj.value,
+    rational_thought: ratObj.value,
     personal_year_current: personalYear,
-    karmic_lessons: [13, 14, 16, 19].filter(n => n === lifePath || n === expression),
+    karmic_lessons: missingDigits,
+    lpe_bridge: Math.abs(reduceNumber(lpObj.value, false) - reduceNumber(expObj.value, false)),
+    hdp_bridge: Math.abs(reduceNumber(hdObj.value, false) - reduceNumber(perObj.value, false)),
+    breakdowns: {
+      life_path: lpObj.breakdown,
+      expression: expObj.breakdown,
+      heart_desire: hdObj.breakdown,
+      personality: perObj.breakdown,
+      attitude: attObj.breakdown,
+      balance: balObj.breakdown,
+      maturity: matObj.breakdown,
+      rational_thought: ratObj.breakdown,
+      birthday: birthdayObj.breakdown,
+    }
   };
 }
 
-/**
- * Sinh bộ dữ liệu 3 tầng cho giao diện và báo cáo
- */
 export function generate3LayerNumerologyData(customer: any) {
-  const map = customer?.map || {};
-  const lp = map.life_path || 1;
-  const exp = map.expression || 1;
-  const hd = map.heart_desire || 1;
-  const py = map.personal_year_current || ((new Date().getFullYear() % 9) || 9);
+  const firstName = customer?.first_name || '';
+  const lastName = customer?.last_name || '';
+  let rawFullName = `${lastName} ${firstName}`.trim();
+  if (!rawFullName) {
+    rawFullName = customer?.full_name || customer?.name || 'Bạn';
+  }
+  const fullName = formatTitleCase(rawFullName);
+  const dob = customer?.dob || '01/01/1990';
 
-  const fullName = `${customer?.last_name || ''} ${customer?.first_name || ''}`.trim() || 'Bạn';
+  // Luôn tính toán bản đồ chính xác thời gian thực theo chuẩn Pythagorean Indicator
+  const calculatedMap = calculateNumerologyMap(fullName, dob);
+
+  const lp = calculatedMap.life_path;
+  const exp = calculatedMap.expression;
+  const hd = calculatedMap.heart_desire;
+  const personality = calculatedMap.personality;
+  const balance = calculatedMap.balance;
+  const birthday = calculatedMap.birthday;
+  const maturity = calculatedMap.maturity;
+  const attitude = calculatedMap.attitude;
+  const rationalThought = calculatedMap.rational_thought;
+  const subconsciousConfidence = 9 - (calculatedMap.karmic_lessons?.length || 0);
+  const py = calculatedMap.personal_year_current;
+
+  const breakdowns = calculatedMap.breakdowns;
+  const gender = customer?.gender === 'female' ? 'Nữ' : customer?.gender === 'male' ? 'Nam' : 'Khác';
+
+  // Calculate age group
+  let age = 30;
+  if (dob) {
+    const parts = dob.replace(/-/g, '/').split('/');
+    if (parts.length === 3) {
+      const birthYear = parseInt(parts[2], 10);
+      if (!isNaN(birthYear)) {
+        age = new Date().getFullYear() - birthYear;
+      }
+    }
+  }
+
+  let ageGroupText = '';
+  let ageGroupRole = '';
+  if (age < 15) {
+    ageGroupText = `Giai đoạn thiếu nhi (${age} tuổi)`;
+    ageGroupRole = `Giúp cha mẹ thấu hiểu sâu sắc tố chất, tâm lý và định hướng nuôi dạy tiềm năng cho bé.`;
+  } else if (age <= 25) {
+    ageGroupText = `Giai đoạn tuổi trẻ & Học tập (${age} tuổi)`;
+    ageGroupRole = `Tập trung vào phát triển năng khiếu, học vấn, khám phá bản sắc cá nhân và định hướng sự nghiệp khởi đầu.`;
+  } else if (age <= 55) {
+    ageGroupText = `Giai đoạn Trưởng thành & Sự nghiệp (${age} tuổi)`;
+    ageGroupRole = `Tập trung bứt phá công việc, quản trị tài chính, gắn kết mối quan hệ tình cảm, gia đình và thấu hiểu cha mẹ.`;
+  } else {
+    ageGroupText = `Giai đoạn Chiêm nghiệm & Hoàn thiện (${age} tuổi)`;
+    ageGroupRole = `Tập trung giải tỏa các điểm nghẽn cuộc sống, chuyển hóa bài học quá khứ, truyền dạy di sản và hướng về sự bình an nội tâm.`;
+  }
 
   const lpData = NUMBER_SPECIFIC_MEANINGS[lp] || NUMBER_SPECIFIC_MEANINGS[1];
   const expData = NUMBER_SPECIFIC_MEANINGS[exp] || NUMBER_SPECIFIC_MEANINGS[1];
   const hdData = NUMBER_SPECIFIC_MEANINGS[hd] || NUMBER_SPECIFIC_MEANINGS[1];
 
-  // TẦNG 1: Ý nghĩa bản thân chỉ số (Guest Hook)
+  // TẦNG 1: Ý nghĩa 3 con số dẫn đường (Tam Giác Vàng - Guest)
   const layer1 = {
     life_path: {
       ...INDICATOR_DEFINITIONS.life_path,
       userNumber: lp,
+      breakdown: breakdowns.life_path,
       hook: lpData.shortHook,
     },
     expression: {
       ...INDICATOR_DEFINITIONS.expression,
       userNumber: exp,
+      breakdown: breakdowns.expression,
       hook: expData.shortHook,
     },
     heart_desire: {
       ...INDICATOR_DEFINITIONS.heart_desire,
       userNumber: hd,
+      breakdown: breakdowns.heart_desire,
       hook: hdData.shortHook,
     }
   };
 
-  // TẦNG 2: Ý nghĩa con số cụ thể của người dùng (Free User sau khi Login Google)
+  // 21 INDICATOR ITEMS DÀNH CHO TAB 2 (GRID 21 THẺ VỚI BREAKDOWN HỢP THÀNH)
+  const grid21Indicators = [
+    { id: 'lp', number: `${lp}`, breakdown: breakdowns.life_path, title: 'ĐƯỜNG ĐỜI', desc: 'Số phận, sức mạnh và nét đặc biệt trong tính cách của bạn. Những trở ngại bạn có thể gặp phải để hoàn thành bài học.' },
+    { id: 'bal', number: `${balance}`, breakdown: breakdowns.balance, title: 'CÂN BẰNG', desc: 'Cách bạn đối diện với vấn đề và nghịch cảnh.' },
+    { id: 'exp', number: `${exp}`, breakdown: breakdowns.expression, title: 'SỨ MỆNH', desc: 'La bàn dẫn lối giúp bạn hoàn thành sứ mệnh và mang lại những giá trị to lớn cho cuộc đời.' },
+    { id: 'lpe', number: `${calculatedMap.lpe_bridge || 2}`, breakdown: '', title: 'LIÊN KẾT ĐƯỜNG ĐỜI – SỨ MỆNH', desc: 'Việc bạn cần làm để tốt nghiệp bài học cuộc đời và thực hiện sứ mệnh.' },
+    { id: 'hd', number: `${hd}`, breakdown: breakdowns.heart_desire, title: 'LINH HỒN', desc: 'Khao khát ẩn giấu trong tâm hồn, lý do phía sau mọi hành động của bạn.' },
+    { id: 'dob', number: `${birthday}`, breakdown: breakdowns.birthday, title: 'NGÀY SINH', desc: 'Những đặc điểm, lĩnh vực chuyên môn hoặc kỹ năng bạn cần phát triển và sẽ thành công nếu muốn gắn bó cả đời với chúng.' },
+    { id: 'per', number: `${personality}`, breakdown: breakdowns.personality, title: 'NHÂN CÁCH', desc: 'Cá tính, thế giới quan, các mối quan hệ và các vấn đề trong cách bạn đối nhân xử thế.' },
+    { id: 'hdp', number: `${calculatedMap.hdp_bridge || 1}`, breakdown: '', title: 'LIÊN KẾT LINH HỒN – NHÂN CÁCH', desc: 'Cầu nối liên kết cách nhìn của bạn về bản thân và hình ảnh của bạn trong mắt người khác.' },
+    { id: 'mat', number: `${maturity}`, breakdown: breakdowns.maturity, title: 'TRƯỞNG THÀNH', desc: 'Con người, giá trị, khát vọng, mục tiêu của bạn trong thời kỳ "vàng son" từ 30 – 40 tuổi.' },
+    { id: 'att', number: `${attitude}`, breakdown: breakdowns.attitude, title: 'THÁI ĐỘ', desc: 'Mô tả thái độ và cách bạn nhìn nhận các tình huống hằng ngày.' },
+    { id: 'kar', number: calculatedMap.karmic_lessons?.length > 0 ? calculatedMap.karmic_lessons.join(',') : '2,4,9', breakdown: '', title: 'THIẾU', desc: 'Điểm yếu bạn cần khắc phục.' },
+    { id: 'les', number: '-', breakdown: '', title: 'BÀI HỌC', desc: 'Những bài học bạn cần chinh phục để hoàn thiện bản thân.' },
+    { id: 'rat', number: `${rationalThought}`, breakdown: breakdowns.rational_thought, title: 'TƯ DUY LÝ TRÍ', desc: 'Lối tư duy và hướng ra quyết định của bạn.' },
+    { id: 'sub', number: `${subconsciousConfidence}`, breakdown: '', title: 'SỨC MẠNH TIỀM THỨC', desc: 'Đặc điểm tính cách mà bạn cần phát triển để ứng phó và giải quyết vấn đề.' },
+    { id: 'pas', number: '5', breakdown: '', title: 'ĐAM MÊ', desc: 'Kỹ năng đặc biệt, sở thích, đam mê, những hoạt động mang đến sự nhận thức và niềm vui cho bạn.' },
+    { id: 'py', number: `${calculatedMap.personal_year_current || '6'}`, breakdown: '', title: 'NĂM CÁ NHÂN', desc: 'Những thay đổi sẽ xảy ra trong những năm tới và cách bạn ứng xử.' },
+    { id: 'pm', number: `${((calculatedMap.personal_year_current + new Date().getMonth()) % 9) + 1 || '7'}`, breakdown: '', title: 'THÁNG CÁ NHÂN', desc: 'Những thay đổi sẽ xảy ra trong những tháng tới và cách bạn ứng xử.' },
+    { id: 'pin', number: '5,8,4,9', breakdown: '', title: 'CHẶNG', desc: 'Mức độ trưởng thành, trách nhiệm, khả năng lĩnh hội, các sự kiện quan trọng trong mỗi giai đoạn cuộc đời.' },
+    { id: 'pd', number: `${((calculatedMap.personal_year_current + 2) % 9) || 8}`, breakdown: '', title: 'NGÀY CÁ NHÂN', desc: 'Gợi ý những hành động phù hợp cho một ngày hiệu quả của bạn.' },
+    { id: 'gen', number: `${reduceNumber(yearFromDob(customer?.dob) || 6, false)}`, breakdown: '', title: 'THẾ HỆ', desc: 'Giúp bạn nhận biết những yêu cầu và kỳ vọng bạn cần làm để phù hợp với thời đại của mình.' },
+    { id: 'cha', number: '1,4,3,3', breakdown: '', title: 'THÁCH THỨC', desc: 'Vấn đề lớn bạn sẽ đối mặt trong các giai đoạn và cách bạn nên làm để vượt qua.' }
+  ];
+
+
+  // TẦNG 2: Ý nghĩa chi tiết 21 con số
   const layer2 = {
-    overviewTitle: `Bản Sắc Năng Lượng Con Số Của ${fullName}`,
+    overviewTitle: `Life Map 21 Chỉ Số Của ${fullName}`,
     lifePathAnalysis: {
       number: lp,
       title: lpData.title,
@@ -294,24 +495,175 @@ export function generate3LayerNumerologyData(customer: any) {
       number: hd,
       title: hdData.title,
       content: hdData.soulMeaning,
-    }
+    },
+    indicatorsGrid: grid21Indicators
   };
 
-  // TẦNG 3: Luận giải đa chiều độc bản (Paid User 17 chỉ số)
+  // TẦNG 3: LUẬN GIẢI ĐA CHIỀU ĐỘC BẢN (AI DYNAMIC SYNTHESIS)
+  const currentWorldYear = new Date().getFullYear();
+  const worldYearNumber = reduceNumber(currentWorldYear, false);
+  const currentWorldMonth = new Date().getMonth() + 1;
+  const worldMonthNumber = reduceNumber(worldYearNumber + currentWorldMonth, false);
+
   const layer3 = {
-    crossSynthesis: `Phân Tích Tương Tác Ma Trận Đa Chiều:\n• Điểm hội tụ: Bạn sở hữu Con số Đường Đời ${lp} kết hợp cùng Sứ Mệnh ${exp}. Năng lượng của số ${lp} giúp bạn xác định phương hướng rõ ràng, trong khi số ${exp} cung cấp bộ công cụ sắc bén để hiện thực hóa.\n• Tiếng nói nội tâm: Chỉ số Linh Hồn ${hd} nhắc nhở bạn rằng thành công bên ngoài chỉ thực sự trọn vẹn khi bạn thỏa mãn được khát khao bình an và ý nghĩa bên trong.`,
+    genderAgeAnalysis: {
+      gender,
+      ageGroupText,
+      ageGroupRole,
+      insights: `Với giới tính ${gender} ở ${ageGroupText}, góc nhìn suy nghĩ và cách phản ứng cảm xúc của ${fullName} được chi phối bởi trường năng lượng Đường Đời ${lp} kết hợp cùng Sứ Mệnh ${exp}. ${
+        gender === 'Nữ'
+          ? 'Năng lượng Nữ tính giúp bạn phát huy sự tinh tế, nuôi dưỡng mối quan hệ và trực giác nhạy bén.'
+          : 'Năng lượng Nam tính giúp bạn gia tăng ý chí tiên phong, bản lĩnh gánh vác trách nhiệm và tư duy chiến lược.'
+      } ${ageGroupRole}`
+    },
+    worldCycleAnalysis: {
+      worldYearNumber,
+      worldMonthNumber,
+      personalYear: py,
+      forecast: `Năm Thế Giới ${worldYearNumber} & Tháng Thế Giới ${worldMonthNumber} mang năng lượng chuyển động chung. Kết hợp với Năm Cá Nhân ${py} của bạn, đây là thời điểm chiến lược để bạn đón đầu cơ hội, tái cấu trúc mục tiêu và bứt phá mạnh mẽ.`
+    },
+    crossSynthesis: `Phân Tích Tương Tác Ma Trận Đa Chiều:\n• Trường năng lượng chủ đạo: ${fullName} mang Đường Đời ${lp}${breakdowns.life_path ? ` (hợp thành từ ngày/tháng/năm: ${breakdowns.life_path})` : ''} kết hợp cùng Sứ Mệnh ${exp}${breakdowns.expression ? ` (hợp thành từ các từ: ${breakdowns.expression})` : ''}.${
+      (lp === 11 || lp === 22 || lp === 33 || exp === 11 || exp === 22 || exp === 33)
+        ? ` Bạn sở hữu con số Master bậc thầy mang tần số rung động tâm thức cao, trách nhiệm xã hội và tầm nhìn kiến tạo vĩ mô vượt trội.`
+        : ''
+    }\n• Phân rã năng lượng cấu phần: Các con số thành phần [${breakdowns.expression || ''}] của họ tên bổ trợ nguồn lực đa dạng, giúp bạn linh hoạt kết hợp giữa trực giác và tư duy thực tế khi hành động.\n• Tiếng nói nội tâm: Chỉ số Linh Hồn ${hd}${breakdowns.heart_desire ? ` (${breakdowns.heart_desire})` : ''} nhắc nhở bạn rằng thành công bên ngoài chỉ thực sự trọn vẹn khi bạn thỏa mãn được khát khao bình an và ý nghĩa bên trong.`,
     challenges: {
       obstacles: `Thách thức chủ đạo: Cần vượt qua điểm yếu cố hữu của con số ${lp}, đặc biệt là: ${lpData.weaknesses.join(', ')}.`,
-      karmicLessons: map.karmic_lessons && map.karmic_lessons.length > 0
-        ? `Bài học nợ nghiệp cần hoàn tất: Con số [${map.karmic_lessons.join(', ')}]. Hãy chú trọng rèn luyện tính kiên trì và kỷ luật tự thân.`
+      karmicLessons: calculatedMap.karmic_lessons && calculatedMap.karmic_lessons.length > 0
+        ? `Bài học nợ nghiệp cần hoàn tất: Con số [${calculatedMap.karmic_lessons.join(', ')}]. Hãy chú trọng rèn luyện tính kiên trì và kỷ luật tự thân.`
         : `Bản đồ của bạn không có Nợ nghiệp lớn, đây là một thuận duyên lớn giúp bạn phát triển bứt phá khi đi đúng hướng.`
     },
     actionRoadmap: {
       actionPlan: `1. Xác lập mục tiêu rõ ràng phù hợp với trường năng lượng số ${lp}.\n2. Tận dụng tối đa thế mạnh ngoại giao và công cụ của Sứ Mệnh ${exp}.\n3. Dành thời gian nuôi dưỡng tâm hồn theo nhu cầu số ${hd}.`,
-      careerGuide: `Môi trường nghề nghiệp đỉnh cao dành cho bạn là nơi tôn trọng sự tự chủ, sáng tạo và có lộ trình phát triển minh bạch.`,
+      careerGuide: `Môi trường nghề nghiệp đỉnh cao dành cho ${fullName} là nơi tôn trọng sự tự chủ, sáng tạo và có lộ trình phát triển minh bạch.`,
       personalYear: `Năm Cá Nhân ${py}: Đây là giai đoạn chiến lược để bạn tái cấu trúc và đón đầu những vận hội mới!`
     }
   };
 
-  return { layer1, layer2, layer3 };
+  // TÍNH TOÁN SƠ ĐỒ KIM TỰ THÁP (4 ĐỈNH CAO & 4 THÁCH THỨC)
+  const pyramidData = calculatePyramidDetails(customer?.dob || '01/01/1990', lp);
+
+  // TÍNH TOÁN TIMELINE NGẮN HẠN (NĂM, THÁNG & 7 NGÀY CÁ NHÂN)
+  const shortTermTimeline = calculateTimelineDetails(customer?.dob || '01/01/1990', py);
+
+  return { layer1, layer2: { ...layer2, pyramidData, shortTermTimeline }, layer3 };
 }
+
+function reduceIgnoreMaster(num: number): number {
+  let val = Math.floor(Number(num));
+  if (isNaN(val)) return 0;
+  let r = 0;
+  for (const char of val.toString().split('')) {
+    r += parseInt(char, 10);
+  }
+  while (r > 9) {
+    const temp = r.toString().split('');
+    r = 0;
+    for (const char of temp) {
+      r += parseInt(char, 10);
+    }
+  }
+  return r;
+}
+
+function calculatePyramidDetails(dob: string, lifePath: number) {
+  let day = 1, month = 1, year = 1990;
+  const cleanDob = dob.replace(/-/g, '/');
+  const parts = cleanDob.split('/');
+  if (parts.length === 3) {
+    day = parseInt(parts[0], 10) || 1;
+    month = parseInt(parts[1], 10) || 1;
+    year = parseInt(parts[2], 10) || 1990;
+  }
+
+  const r_month = reduceIgnoreMaster(month); // Root 1: Tháng
+  const r_day = reduceIgnoreMaster(day);     // Root 2: Ngày
+  const r_year = reduceIgnoreMaster(year);   // Root 3: Năm
+
+  const lpReduced = reduceIgnoreMaster(r_month + r_day + r_year);
+
+  // 4 Đỉnh Cao (Pinnacles)
+  const p1 = reduceIgnoreMaster(r_month + r_day);
+  const p2 = reduceIgnoreMaster(r_day + r_year);
+  const p3 = reduceIgnoreMaster(p1 + p2);
+  const p4 = reduceNumber(r_month + r_year, true);
+
+  // 4 Thách Thức (Challenges)
+  const c1 = Math.abs(r_month - r_day);
+  const c2 = Math.abs(r_day - r_year);
+  const c3 = Math.abs(c1 - c2);
+  const c4 = Math.abs(r_year - r_month);
+
+  // 4 Tuổi chuyển chặng
+  const age1 = 36 - lpReduced;
+  const age2 = age1 + 9;
+  const age3 = age2 + 9;
+  const age4 = age3 + 9;
+
+  const currentYear = new Date().getFullYear();
+  const currentAge = currentYear - year;
+
+  return {
+    root: [r_month, r_day, r_year],
+    pinnacle: [p1, p2, p3, p4],
+    challenge: [c1, c2, c3, c4],
+    age: [age1, age2, age3, age4],
+    currentAge,
+  };
+}
+
+function calculateTimelineDetails(dob: string, personalYear: number) {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  const currentDay = now.getDate();
+
+  // Tháng cá nhân hiện tại
+  const personalMonth = reduceIgnoreMaster(personalYear + currentMonth);
+
+  // 7 ngày quanh ngày hiện tại (-3 đến +3)
+  const days = [-3, -2, -1, 0, 1, 2, 3].map((offset) => {
+    const d = new Date(now.getTime() + offset * 86400000);
+    const dNum = d.getDate();
+    const mNum = d.getMonth() + 1;
+    const isToday = offset === 0;
+
+    // Ngày cá nhân cho ngày d
+    const pDay = reduceIgnoreMaster(personalMonth + dNum);
+
+    const weekdaysVi = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+    const dayOfWeek = isToday ? 'Hôm nay' : weekdaysVi[d.getDay()];
+
+    return {
+      offset,
+      dayOfWeek,
+      dateFormatted: `${dNum < 10 ? '0' + dNum : dNum}/${mNum < 10 ? '0' + mNum : mNum}`,
+      dateNumber: dNum,
+      monthNumber: mNum,
+      personalDay: pDay,
+      isToday,
+    };
+  });
+
+  return {
+    currentYear,
+    personalYear,
+    currentMonth,
+    personalMonth,
+    currentDay,
+    personalDayToday: reduceIgnoreMaster(personalMonth + currentDay),
+    days,
+  };
+}
+
+function yearFromDob(dob?: string): number {
+  if (!dob) return 1990;
+  const parts = dob.replace(/-/g, '/').split('/');
+  if (parts.length === 3) {
+    const y = parseInt(parts[2], 10);
+    return isNaN(y) ? 1990 : y;
+  }
+  return 1990;
+}
+
+
