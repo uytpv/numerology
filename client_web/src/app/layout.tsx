@@ -19,8 +19,8 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: 'Life Maps - Bản Đồ Vận Mệnh & Khoa Học Số Học Pythagoras',
-  description: 'Life Maps - Khám phá bản sắc cuộc đời, vận hạn và lộ trình phát triển bản thân dưới góc nhìn khoa học Pythagoras',
+  title: 'Life Maps - Bản Đồ Vận Mệnh & Hệ Thống Thần Số Học Pythagoras',
+  description: 'Life Maps - Khám phá bản sắc cuộc đời, nhịp năng lượng và kế hoạch hành động phát triển bản thân theo trường phái Pythagoras',
 };
 
 export default function RootLayout({
