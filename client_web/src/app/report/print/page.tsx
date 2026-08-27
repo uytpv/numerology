@@ -341,11 +341,11 @@ function PrintContent() {
               <div className="flex flex-col items-center space-y-2 max-w-sm mx-auto">
                 <div className="w-12 h-12 rounded-xl bg-[#013E37] text-white flex flex-col items-center justify-center font-bold border border-[#FFEFB3]">
                   <span className="text-sm font-extrabold" style={{ color: '#FFEFB3' }}>{layer2.pyramidData.pinnacle[3]}</span>
-                  <span className="text-[7px]" style={{ color: '#FFEFB3' }}>Đỉnh 4 ({layer2.pyramidData.age[3]}+)</span>
+                  <span className="text-[7px]" style={{ color: '#FFEFB3' }}>Đỉnh 4 ({layer2.pyramidData.age[2]}+)</span>
                 </div>
                 <div className="w-12 h-12 rounded-xl bg-[#013E37] text-white border border-[#FFEFB3] flex flex-col items-center justify-center font-bold">
                   <span className="text-sm font-extrabold" style={{ color: '#FFEFB3' }}>{layer2.pyramidData.pinnacle[2]}</span>
-                  <span className="text-[7px]" style={{ color: '#FFEFB3' }}>Đỉnh 3 ({layer2.pyramidData.age[2]}-{layer2.pyramidData.age[3]})</span>
+                  <span className="text-[7px]" style={{ color: '#FFEFB3' }}>Đỉnh 3 ({layer2.pyramidData.age[1]}-{layer2.pyramidData.age[2]})</span>
                 </div>
                 <div className="flex gap-4">
                   <div className="w-12 h-12 rounded-xl bg-[#013E37] text-white border border-[#FFEFB3] flex flex-col items-center justify-center font-bold">

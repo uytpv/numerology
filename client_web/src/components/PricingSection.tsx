@@ -2,11 +2,10 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/lib/auth';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { Check, ShieldCheck, Zap, Sparkles, Award, Star, X } from 'lucide-react';
+import { CheckoutModal } from './CheckoutModal';
+import { Check, ShieldCheck, Zap, Sparkles, Award } from 'lucide-react';
 
-interface PricingPlan {
+export interface PricingPlan {
   id: string;
   name: string;
   badge?: string;
@@ -20,7 +19,7 @@ interface PricingPlan {
   credits?: number;
 }
 
-const PRICING_PLANS: PricingPlan[] = [
+export const PRICING_PLANS: PricingPlan[] = [
   {
     id: 'b2c_single_200k',
     name: 'Gói Cá Nhân Chuyên Sâu',
@@ -138,9 +137,7 @@ export default function PricingSection({ customerId, onPaymentSuccess }: { custo
   const { user, loginWithGoogle } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'b2c' | 'coach'>('all');
   const [selectedPlan, setSelectedPlan] = useState<PricingPlan | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [qrModalOpen, setQrModalOpen] = useState(false);
-  const [paymentOrder, setPaymentOrder] = useState<any>(null);
+  const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
 
   const filteredPlans = PRICING_PLANS.filter(plan => {
     if (selectedCategory === 'b2c') return plan.type === 'b2c' || plan.type === 'family';
@@ -155,57 +152,12 @@ export default function PricingSection({ customerId, onPaymentSuccess }: { custo
     }
 
     setSelectedPlan(plan);
-    setIsProcessing(true);
-
-    try {
-      const orderCode = `TSH${Math.floor(100000 + Math.random() * 900000)}`;
-      const orderData = {
-        order_code: orderCode,
-        user_id: user.uid,
-        user_email: user.email,
-        user_name: user.displayName || 'Khách hàng',
-        customer_id: customerId || null,
-        plan_id: plan.id,
-        plan_name: plan.name,
-        amount: plan.price,
-        credits: plan.credits || 1,
-        status: 'pending',
-        payment_method: 'vietqr',
-        created_at: serverTimestamp(),
-      };
-
-      const docRef = await addDoc(collection(db, 'orders'), orderData);
-
-      const qrUrl = `https://img.vietqr.io/image/MB-0357608888-compact2.png?amount=${plan.price}&addInfo=${orderCode}&accountName=HE%20THONG%20LIFE%20MAPS`;
-
-      setPaymentOrder({
-        id: docRef.id,
-        ...orderData,
-        qrUrl,
-      });
-
-      setQrModalOpen(true);
-    } catch (err) {
-      console.error('Lỗi khi tạo đơn hàng:', err);
-      alert('Có lỗi xảy ra khi khởi tạo cổng thanh toán. Vui lòng thử lại!');
-    } finally {
-      setIsProcessing(false);
-    }
+    setCheckoutModalOpen(true);
   };
 
-  const handleSimulatePaid = async () => {
-    if (!paymentOrder) return;
-    setIsProcessing(true);
-    try {
-      if (onPaymentSuccess) {
-        onPaymentSuccess();
-      }
-      setQrModalOpen(false);
-      alert(`Thanh toán thành công gói [${paymentOrder.plan_name}]! Hệ thống đã kích hoạt quyền lợi cho bạn.`);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsProcessing(false);
+  const handleModalSuccess = () => {
+    if (onPaymentSuccess) {
+      onPaymentSuccess();
     }
   };
 
@@ -232,7 +184,7 @@ export default function PricingSection({ customerId, onPaymentSuccess }: { custo
           <div className="inline-flex p-1.5 rounded-2xl bg-[#EEF5F3] border border-[#E2E8E5] mt-8 shadow-inner">
             <button
               onClick={() => setSelectedCategory('all')}
-              className={`py-2.5 px-6 rounded-xl text-sm font-semibold transition-all duration-200 ${
+              className={`py-2.5 px-6 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer ${
                 selectedCategory === 'all'
                   ? 'bg-[#013E37] text-white shadow-md'
                   : 'text-[#5F736E] hover:text-[#013E37]'
@@ -242,7 +194,7 @@ export default function PricingSection({ customerId, onPaymentSuccess }: { custo
             </button>
             <button
               onClick={() => setSelectedCategory('b2c')}
-              className={`py-2.5 px-6 rounded-xl text-sm font-semibold transition-all duration-200 ${
+              className={`py-2.5 px-6 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer ${
                 selectedCategory === 'b2c'
                   ? 'bg-[#013E37] text-white shadow-md'
                   : 'text-[#5F736E] hover:text-[#013E37]'
@@ -252,7 +204,7 @@ export default function PricingSection({ customerId, onPaymentSuccess }: { custo
             </button>
             <button
               onClick={() => setSelectedCategory('coach')}
-              className={`py-2.5 px-6 rounded-xl text-sm font-semibold transition-all duration-200 ${
+              className={`py-2.5 px-6 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer ${
                 selectedCategory === 'coach'
                   ? 'bg-[#013E37] text-white shadow-md'
                   : 'text-[#5F736E] hover:text-[#013E37]'
@@ -317,8 +269,7 @@ export default function PricingSection({ customerId, onPaymentSuccess }: { custo
 
               <button
                 onClick={() => handleSelectPlan(plan)}
-                disabled={isProcessing}
-                className={`w-full py-4 px-6 rounded-2xl font-bold text-sm tracking-wide transition-all duration-200 flex items-center justify-center gap-2 ${
+                className={`w-full py-4 px-6 rounded-2xl font-bold text-sm tracking-wide transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer shadow-md ${
                   plan.isPopular
                     ? 'btn-primary'
                     : 'btn-secondary'
@@ -338,77 +289,31 @@ export default function PricingSection({ customerId, onPaymentSuccess }: { custo
           </div>
           <div className="flex items-center gap-2">
             <Zap size={16} className="text-[#013E37]" />
-            <span>Kích hoạt tự động qua VietQR Napas247</span>
+            <span>Kích hoạt tự động qua VietQR ACB</span>
           </div>
           <div className="flex items-center gap-2">
             <Award size={16} className="text-[#8C6A81]" />
-            <span>Cam kết chính xác theo hệ thống Pythagoras</span>
+            <span>Chuẩn Luận Giải Pythagoras Quốc Tế</span>
           </div>
         </div>
       </div>
 
-      {/* QR Code Payment Modal */}
-      {qrModalOpen && paymentOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0D2B26]/60 backdrop-blur-sm">
-          <div className="bg-[#FFFFFF] border border-[#E2E8E5] rounded-3xl max-w-md w-full p-7 text-center relative shadow-2xl animate-in fade-in zoom-in duration-200">
-            <button
-              onClick={() => setQrModalOpen(false)}
-              className="absolute top-4 right-4 p-2 text-[#5F736E] hover:text-[#0D2B26] hover:bg-[#EEF5F3] rounded-full transition-all"
-            >
-              <X size={20} />
-            </button>
-
-            <div className="inline-flex p-3 rounded-2xl bg-[#FFEFB3] text-[#013E37] mb-4 shadow-sm">
-              <Sparkles size={24} />
-            </div>
-
-            <h3 className="text-2xl font-bold font-heading text-[#0D2B26] mb-1">Thanh Toán Qua VietQR</h3>
-            <p className="text-xs text-[#5F736E] mb-5">
-              Mở App Ngân hàng bất kỳ để quét mã QR Napas247 tự động
-            </p>
-
-            <div className="bg-[#FAF8F5] p-4 rounded-2xl inline-block mb-5 border border-[#E2E8E5] shadow-inner">
-              <img
-                src={paymentOrder.qrUrl}
-                alt="VietQR Code"
-                className="w-56 h-56 mx-auto object-contain rounded-lg"
-              />
-            </div>
-
-            <div className="bg-[#EEF5F3] rounded-2xl p-4 text-left text-xs space-y-2 border border-[#E2E8E5] mb-6">
-              <div className="flex justify-between">
-                <span className="text-[#5F736E]">Gói dịch vụ:</span>
-                <span className="font-bold text-[#0D2B26]">{paymentOrder.plan_name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#5F736E]">Số tiền:</span>
-                <span className="font-extrabold text-[#013E37] text-sm">{paymentOrder.amount.toLocaleString('vi-VN')} đ</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#5F736E]">Mã đơn hàng:</span>
-                <span className="font-mono text-[#267D71] font-bold">{paymentOrder.order_code}</span>
-              </div>
-            </div>
-
-            <div className="space-y-2.5">
-              <button
-                onClick={handleSimulatePaid}
-                disabled={isProcessing}
-                className="w-full py-3.5 btn-primary rounded-xl text-sm shadow-md"
-              >
-                {isProcessing ? 'Đang xác thực...' : '✅ Tôi Đã Chuyển Khoản Thành Công'}
-              </button>
-              <button
-                onClick={() => setQrModalOpen(false)}
-                className="w-full py-2.5 text-xs text-[#5F736E] hover:text-[#0D2B26] font-medium"
-              >
-                Hủy và đóng cửa sổ
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* MODAL THANH TOÁN VIETQR */}
+      {selectedPlan && (
+        <CheckoutModal
+          isOpen={checkoutModalOpen}
+          onClose={() => setCheckoutModalOpen(false)}
+          planId={selectedPlan.id}
+          planName={selectedPlan.name}
+          amount={selectedPlan.price}
+          features={selectedPlan.features}
+          customerId={customerId}
+          userId={user?.uid}
+          userEmail={user?.email || ''}
+          userName={user?.displayName || 'Khách hàng'}
+          onSuccess={handleModalSuccess}
+        />
       )}
     </section>
   );
 }
-

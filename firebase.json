@@ -6,6 +6,7 @@
   "hosting": {
     "site": "lifemaps",
     "public": "client_web/out",
+    "cleanUrls": true,
     "ignore": [
       "firebase.json",
       "**/.*",

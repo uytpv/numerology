@@ -218,7 +218,11 @@ export default function HomePage() {
               <div className="w-8 h-8 rounded-full bg-[#E2E8E5] animate-pulse" />
             ) : user ? (
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 px-3.5 py-1.5 bg-[#FFFFFF] border border-[#E2E8E5] rounded-2xl shadow-sm">
+                <a
+                  href="/account"
+                  className="flex items-center gap-2 px-3.5 py-1.5 bg-[#FFFFFF] hover:bg-[#EEF5F3] border border-[#E2E8E5] rounded-2xl shadow-sm transition-all"
+                  title="Xem tài khoản & gói đã mua"
+                >
                   {user.photoURL ? (
                     <img src={user.photoURL} alt="Avatar" className="w-6 h-6 rounded-full" />
                   ) : (
@@ -227,12 +231,12 @@ export default function HomePage() {
                     </span>
                   )}
                   <span className="text-xs font-semibold text-[#0D2B26] hidden md:inline">
-                    {user.displayName || user.email}
+                    Gói & Tài Khoản
                   </span>
-                </div>
+                </a>
                 <button
                   onClick={logout}
-                  className="px-3 py-1.5 rounded-2xl bg-[#EEF5F3] hover:bg-[#E2E8E5] text-[#5F736E] text-xs font-medium border border-[#E2E8E5] transition-all"
+                  className="px-3 py-1.5 rounded-2xl bg-[#EEF5F3] hover:bg-[#E2E8E5] text-[#5F736E] text-xs font-medium border border-[#E2E8E5] transition-all cursor-pointer"
                 >
                   Đăng Xuất
                 </button>

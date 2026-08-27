@@ -166,12 +166,15 @@ export default function CoachPortalPage() {
               <div className="w-8 h-8 rounded-full bg-[#E2E8E5] animate-pulse" />
             ) : user ? (
               <div className="flex items-center gap-2">
-                <span className="text-xs text-[#013E37] font-bold hidden md:inline px-3 py-1 bg-[#EEF5F3] rounded-xl border border-[#E2E8E5]">
-                  Coach: {user.displayName || user.email}
-                </span>
+                <a
+                  href="/account"
+                  className="text-xs text-[#013E37] font-bold hidden md:inline px-3 py-1.5 bg-[#FFFFFF] hover:bg-[#EEF5F3] rounded-2xl border border-[#E2E8E5] transition-all shadow-xs"
+                >
+                  Gói & Tài Khoản: {user.displayName || user.email}
+                </a>
                 <button
                   onClick={logout}
-                  className="px-3 py-1.5 rounded-xl bg-[#FFFFFF] hover:bg-[#EEF5F3] text-[#5F736E] text-xs font-medium border border-[#E2E8E5] transition-all"
+                  className="px-3 py-1.5 rounded-2xl bg-[#FFFFFF] hover:bg-red-50 hover:text-red-700 text-[#5F736E] text-xs font-medium border border-[#E2E8E5] transition-all cursor-pointer"
                 >
                   Đăng Xuất
                 </button>

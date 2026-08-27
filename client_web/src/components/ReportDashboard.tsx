@@ -607,7 +607,7 @@ export function ReportDashboard({ customer, initialCustomer, isExistingRecord, o
                     {/* ROW 1: PINNACLE 4 (TOP) */}
                     <div className="flex flex-col items-center">
                       <span className="text-xs sm:text-sm font-extrabold text-[#013E37] uppercase tracking-wider mb-1.5">
-                        Đỉnh 4 (Tuổi {pyramid.age[3]}+)
+                        Đỉnh 4 (Tuổi {pyramid.age[2]}+)
                       </span>
                       <div className="w-18 h-18 sm:w-22 sm:h-22 rounded-3xl bg-[#013E37] flex flex-col items-center justify-center border-2 border-[#FFEFB3] shadow-xl ring-4 ring-[#FFEFB3]/40 transition-transform hover:scale-105">
                         <span 
@@ -622,7 +622,7 @@ export function ReportDashboard({ customer, initialCustomer, isExistingRecord, o
                     {/* ROW 2: PINNACLE 3 */}
                     <div className="flex flex-col items-center">
                       <span className="text-xs sm:text-sm font-bold text-[#013E37] uppercase tracking-wider mb-1.5">
-                        Đỉnh 3 (Tuổi {pyramid.age[2]} - {pyramid.age[3]})
+                        Đỉnh 3 (Tuổi {pyramid.age[1]} - {pyramid.age[2]})
                       </span>
                       <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-[#013E37] flex flex-col items-center justify-center border-2 border-[#FFEFB3] shadow-md transition-transform hover:scale-105">
                         <span 
