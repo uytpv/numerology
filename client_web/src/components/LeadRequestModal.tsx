@@ -35,7 +35,7 @@ export const LeadRequestModal: React.FC<LeadRequestModalProps> = ({
   const [successResult, setSuccessResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 
   if (!isOpen) return null;
 

@@ -108,10 +108,6 @@ export default function PricingPage() {
           <h1 className="text-3xl sm:text-5xl font-bold font-heading text-[#0D2B26] tracking-tight">
             Bảng Giá Dịch Vụ Luận Giải & Khai Vấn
           </h1>
-
-          <p className="text-[#5F736E] text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
-            Chọn gói báo cáo cá nhân chuyên sâu hoặc đăng ký giải pháp White-Label chuyên nghiệp dành riêng cho Life Coach.
-          </p>
         </div>
       </section>
 
@@ -157,7 +153,7 @@ export default function PricingPage() {
                 <span>Gói Life Coach B2B hoạt động như thế nào?</span>
               </h3>
               <p className="text-xs text-[#5F736E] leading-relaxed">
-                Chuyên gia có thể nạp gói sỉ với chi phí ưu đãi chỉ từ 29k-49k/bài, gắn thương hiệu & logo riêng lên file PDF 30+ trang và quản lý CRM khách hàng bảo mật.
+                Chuyên gia có thể nạp gói sỉ với chi phí ưu đãi chỉ từ 15k-25k/bài, gắn thương hiệu & logo riêng lên file PDF 30+ trang và quản lý CRM khách hàng bảo mật.
               </p>
             </div>
 

@@ -4,7 +4,7 @@ import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { generate3LayerNumerologyData, formatTitleCase } from '@/lib/numerologyReportGenerator';
+import { generate3LayerNumerologyData, formatTitleCase, calculateNumerologyMap } from '@/lib/numerologyReportGenerator';
 import { generateMultiIndicatorSynthesis } from '@/lib/multiIndicatorSynthesis';
 import { validateAndSanitizeReportData } from '@/lib/reportSemanticValidator';
 import { NameAuditAppendix } from '@/components/NameAuditAppendix';
@@ -23,56 +23,109 @@ function PrintContent() {
 
   useEffect(() => {
     async function loadData() {
+      const nameParam = searchParams.get('name');
+      const dobParam = searchParams.get('dob');
+      const genderParam = searchParams.get('gender') || 'male';
+
+      const createFromParamsOrLocal = () => {
+        // 1. Check localStorage first
+        try {
+          const localData = typeof window !== 'undefined' ? localStorage.getItem('lifemaps_current_report') : null;
+          if (localData) {
+            const parsed = JSON.parse(localData);
+            if (parsed && (parsed.full_name || parsed.first_name)) {
+              return parsed;
+            }
+          }
+        } catch (err) {
+          console.error('Error reading localStorage in print:', err);
+        }
+
+        // 2. Compute from URL query params
+        if (nameParam && dobParam) {
+          const map = calculateNumerologyMap(nameParam, dobParam);
+          return {
+            id: 'local_guest',
+            full_name: nameParam,
+            dob: dobParam,
+            gender: genderParam,
+            tier: 'free',
+            map,
+          };
+        }
+
+        return null;
+      };
+
       if (!id || id === 'demo') {
-        setCustomer({
-          full_name: 'Nguyễn Văn An',
-          first_name: 'An',
-          last_name: 'Nguyễn Văn',
-          dob: '18/08/1990',
-          gender: 'male',
-          tier: 'paid',
-          map: {
-            life_path: 8,
-            expression: 1,
-            heart_desire: 6,
-            personality: 4,
-            birthday: 9,
-            attitude: 8,
-            personal_year_current: 9,
-          },
-        });
+        const fallback = createFromParamsOrLocal();
+        if (fallback) {
+          setCustomer(fallback);
+        } else {
+          setCustomer({
+            full_name: 'Nguyễn Văn An',
+            first_name: 'An',
+            last_name: 'Nguyễn Văn',
+            dob: '18/08/1990',
+            gender: 'male',
+            tier: 'paid',
+            map: {
+              life_path: 8,
+              expression: 1,
+              heart_desire: 6,
+              personality: 4,
+              birthday: 9,
+              attitude: 8,
+              personal_year_current: 9,
+            },
+          });
+        }
         setLoading(false);
         return;
       }
 
+      // Guest or local ID: do NOT query Firestore to avoid permission errors
+      if (id.startsWith('local_') || id === 'guest') {
+        const fallback = createFromParamsOrLocal();
+        if (fallback) {
+          setCustomer(fallback);
+        } else {
+          setCustomer({
+            full_name: nameParam || 'Khách Tra Cứu',
+            dob: dobParam || '27/08/1980',
+            gender: genderParam,
+            tier: 'free',
+            map: nameParam && dobParam ? calculateNumerologyMap(nameParam, dobParam) : { life_path: 8, expression: 1, heart_desire: 6, personal_year_current: 9 },
+          });
+        }
+        setLoading(false);
+        return;
+      }
+
+      // Real Firestore ID: Try Firestore first
       try {
         const docRef = doc(db, 'customers', id);
         const snap = await getDoc(docRef);
         if (snap.exists()) {
           setCustomer({ id: snap.id, ...snap.data() });
         } else {
-          // Local storage fallback
-          const localData = localStorage.getItem('lifemaps_current_report');
-          if (localData) {
-            setCustomer(JSON.parse(localData));
-          } else {
-            setCustomer({
-              full_name: 'Nguyễn Văn An',
-              dob: '18/08/1990',
-              gender: 'male',
-              tier: 'paid',
-              map: { life_path: 8, expression: 1, heart_desire: 6, personal_year_current: 9 },
-            });
+          const fallback = createFromParamsOrLocal();
+          if (fallback) {
+            setCustomer(fallback);
           }
         }
       } catch (e) {
-        console.error(e);
+        console.warn('Firestore load failed, falling back to local/params:', e);
+        const fallback = createFromParamsOrLocal();
+        if (fallback) {
+          setCustomer(fallback);
+        }
       } finally {
         setLoading(false);
       }
     }
     loadData();
-  }, [id]);
+  }, [id, searchParams]);
 
   if (loading) {
     return <div className="p-8 text-center text-[#5F736E]">Đang chuẩn bị bản in PDF...</div>;
@@ -118,14 +171,14 @@ function PrintContent() {
       : scope === 'tab2'
       ? `Báo Cáo Life Map ${layer2.indicatorsGrid.length} Chỉ Số`
       : scope === 'tab3'
-      ? 'Báo Cáo Luận Giải Đa Chiều AI VIP'
+      ? 'Báo Cáo Luận Giải Đa Chiều Tầng 3 Chuyên Sâu'
       : 'Bản Đồ Luận Giải Vận Mệnh Trọn Bộ';
 
   return (
-    <div className="bg-[#FFFFFF] text-[#2D3E3A] p-8 sm:p-12 max-w-4xl mx-auto print:p-0 font-sans">
+    <div className="bg-[#FFFFFF] text-[#2D3E3A] p-8 sm:p-12 max-w-4xl mx-auto print:p-0 font-sans print-sheet">
       <style jsx global>{`
         @page {
-          margin: 12mm 15mm;
+          margin: 0; /* Triệt tiêu header/footer mặc định của trình duyệt chứa localhost và timestamp */
           size: A4 portrait;
         }
         @media print {
@@ -134,6 +187,13 @@ function PrintContent() {
             color: #2D3E3A !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          .print-sheet {
+            padding: 14mm 16mm !important;
+            box-sizing: border-box !important;
+            max-width: 100% !important;
           }
         }
       `}</style>

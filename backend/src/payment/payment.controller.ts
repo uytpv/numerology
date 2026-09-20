@@ -1,12 +1,14 @@
 import { Controller, Post, Get, Body, Param, Headers, HttpCode, HttpStatus, BadRequestException, Req } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { ConfigService } from '@nestjs/config';
+import { SePayService } from './sepay.service';
 
 @Controller('api/v1/payments')
 export class PaymentController {
   constructor(
     private paymentService: PaymentService,
     private configService: ConfigService,
+    private sePayService: SePayService,
   ) {}
 
   /**
@@ -81,22 +83,53 @@ export class PaymentController {
   }
 
   /**
-   * Endpoint Xác nhận thanh toán & Giả lập môi trường Test Dev
+   * Endpoint SePay Webhook nhận biến động số dư ngân hàng ACB tự động
+   * POST /api/v1/payments/sepay/webhook hoặc /api/v1/payments/webhook
    */
-  @Post('dev-mock-pay')
-  async simulatePayment(@Body() body: { orderCode: string | number }) {
-    if (!body.orderCode) {
-      throw new BadRequestException('Thiếu orderCode');
-    }
-    const result = await this.paymentService.processSuccessfulOrder(body.orderCode, {
-      simulated: true,
-      note: 'Thanh toán kích hoạt tự động qua VietQR ACB',
-    });
-    return { success: result, message: `Đã kích hoạt thành công đơn hàng #${body.orderCode}` };
+  @Post('sepay/webhook')
+  @HttpCode(HttpStatus.OK)
+  async handleSePayWebhook(
+    @Body() payload: any,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    return this.sePayService.processWebhook(payload, authHeader);
+  }
+
+  @Post('webhook')
+  @HttpCode(HttpStatus.OK)
+  async handleGeneralWebhook(
+    @Body() payload: any,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    return this.sePayService.processWebhook(payload, authHeader);
   }
 
   /**
-   * Alias cho confirm-payment
+   * Endpoint Test Sandbox dành riêng cho Merchant SePay test kiểm thử
+   */
+  @Post('sepay/test-simulate')
+  async simulateSePayTestTransaction(
+    @Body() body: { orderCode: string; amount?: number; gateway?: string }
+  ) {
+    if (!body.orderCode) {
+      throw new BadRequestException('Thiếu orderCode để giả lập test');
+    }
+    const orderDoc = await this.paymentService.getOrderStatus(body.orderCode);
+    const amount = body.amount || (orderDoc?.order?.amount) || 200000;
+    
+    return this.sePayService.processWebhook({
+      id: Math.floor(100000 + Math.random() * 900000),
+      gateway: body.gateway || 'ACB',
+      transactionDate: new Date().toISOString().replace('T', ' ').substring(0, 19),
+      accountNumber: '12688937',
+      content: `TSH${body.orderCode.replace(/^TSH/i, '')} chuyen khoan thanh toan`,
+      transferType: 'in',
+      transferAmount: amount,
+    });
+  }
+
+  /**
+   * Endpoint Xác nhận thanh toán qua Admin Dashboard
    */
   @Post('confirm-payment')
   async confirmPayment(@Body() body: { orderCode: string | number; transactionId?: string }) {

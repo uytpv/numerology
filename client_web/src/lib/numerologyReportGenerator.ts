@@ -928,9 +928,9 @@ export function generate3LayerNumerologyData(customer: any) {
     { id: 'sub', number: `${subconsciousConfidence}/9`, breakdown: '', title: 'SỨC MẠNH TIỀM THỨC', desc: 'Độ đa dạng của nguồn lực phản xạ vô thức khi đối diện áp lực.' },
     { id: 'pas', number: `${hiddenPassionDigit}`, breakdown: '', title: 'ĐAM MÊ', desc: 'Con số xuất hiện nhiều nhất trong tên, nguồn cảm hứng và niềm vui tự nhiên.' },
     { id: 'py', number: `${calculatedMap.personal_year_current || '6'}`, breakdown: '', title: 'NĂM CÁ NHÂN', desc: 'Dòng chảy năng lượng năm hiện tại và nhịp điệu phát triển.' },
-    { id: 'pm', number: `${((calculatedMap.personal_year_current + new Date().getMonth()) % 9) + 1 || '7'}`, breakdown: '', title: 'THÁNG CÁ NHÂN', desc: 'Trọng tâm công việc trong tháng hiện tại.' },
+    { id: 'pm', number: `${shortTermTimeline.personalMonth}`, breakdown: '', title: 'THÁNG CÁ NHÂN', desc: 'Trọng tâm công việc trong tháng hiện tại.' },
     { id: 'pin', number: pyramidData.pinnacle.join(', '), breakdown: '', title: 'CHẶNG', desc: '4 đỉnh cao thành tựu tương ứng với 4 chặng trưởng thành.' },
-    { id: 'pd', number: `${((calculatedMap.personal_year_current + 2) % 9) || 8}`, breakdown: '', title: 'NGÀY CÁ NHÂN', desc: 'Nhịp thở hành vi trong ngày tham chiếu.' },
+    { id: 'pd', number: `${shortTermTimeline.personalDayToday}`, breakdown: '', title: 'NGÀY CÁ NHÂN', desc: 'Nhịp thở hành vi trong ngày tham chiếu.' },
     { id: 'gen', number: `${reduceNumber(yearFromDob(customer?.dob) || 6, false)}`, breakdown: '', title: 'THẾ HỆ', desc: 'Bối cảnh thời đại và xu hướng phát triển chung.' },
     { id: 'cha', number: pyramidData.challenge.join(', '), breakdown: '', title: 'THÁCH THỨC', desc: '4 bài học thử thách cần vượt qua ở từng chặng kim tự tháp.' }
   ];
@@ -1031,7 +1031,7 @@ export function generate3LayerNumerologyData(customer: any) {
 
   // Đọc danh sách focus topics người dùng chọn (mặc định lấy Tiền bạc, Sự nghiệp, Tình cảm nếu chưa chọn)
   const selectedFocusKeys: string[] = (customer?.life_focus && Array.isArray(customer.life_focus) && customer.life_focus.length > 0)
-    ? customer.life_focus.slice(0, 3)
+    ? customer.life_focus
     : ['career', 'money', 'love'];
 
   const focusedTopicDetails = selectedFocusKeys.map(key => {
@@ -1146,7 +1146,7 @@ export function generate3LayerNumerologyData(customer: any) {
     // # TRỌNG TÂM HIỆN TẠI
     currentFocus: {
       title: 'Trọng Tâm Hiện Tại & Nhịp Điệu Thời Gian',
-      synthesis: `Năm Cá Nhân ${py}, Tháng Cá Nhân ${((py + new Date().getMonth()) % 9) + 1} và Ngày Cá Nhân ${((py + 2) % 9) || 8} cùng dòng chảy Năm Thế Giới ${worldYearNumber} tạo nên nhịp thở hành động ở hiện tại. Đây là khung tham chiếu giúp bạn tổ chức công việc và phân bổ năng lượng hợp lý, không phải là dự báo chắc chắn về sự kiện cố định.`,
+      synthesis: `Năm Cá Nhân ${py}, Tháng Cá Nhân ${shortTermTimeline.personalMonth} và Ngày Cá Nhân ${shortTermTimeline.personalDayToday} cùng dòng chảy Năm Thế Giới ${worldYearNumber} tạo nên nhịp thở hành động ở hiện tại. Đây là khung tham chiếu giúp bạn tổ chức công việc và phân bổ năng lượng hợp lý, không phải là dự báo chắc chắn về sự kiện cố định.`,
       personalYear: personalYearKnowledge,
       personalMonth: personalMonthKnowledge,
       personalDay: personalDayKnowledge,

@@ -20,6 +20,39 @@ export interface PricingPlan {
 
 export const PRICING_PLANS: PricingPlan[] = [
   {
+    id: 'test_plan_2k',
+    name: 'Gói Thử Nghiệm QR (2.000đ)',
+    nameVi: 'Gói Thử Nghiệm QR Localhost (2.000 VND)',
+    type: 'b2c_single',
+    priceVnd: 2000,
+    priceUsd: 0.1,
+    tier: 3,
+    credits: 1,
+    badge: 'Test QR Thật 2K',
+    features: [
+      'Quét mã QR app ngân hàng thật (ACB)',
+      'Số tiền chuyển khoản siêu nhỏ: 2.000 VNĐ',
+      'Kích hoạt mở khóa trọn bộ báo cáo Tầng 3',
+      'Kiểm thử Webhook SePay tức thì'
+    ]
+  },
+  {
+    id: 'b2c_single_discovery',
+    name: 'Gói Cá Nhân Khám Phá',
+    nameVi: 'Gói Cá Nhân Khám Phá',
+    type: 'b2c_single',
+    priceVnd: 39000,
+    priceUsd: 1.99,
+    tier: 3,
+    credits: 1,
+    badge: 'Mở Khóa Nhanh',
+    features: [
+      'Mở khóa trọn vẹn 3 Tầng Luận Giải Độc Bản',
+      'Đầy đủ 21 chỉ số Pythagoras & Sơ đồ Kim Tự Tháp',
+      'Xuất bản Ebook PDF 30+ trang chuẩn in ấn cao cấp'
+    ]
+  },
+  {
     id: 'b2c_single_200k',
     name: 'Gói Cá Nhân Chuyên Sâu',
     nameVi: 'Gói Cá Nhân Chuyên Sâu (Tier 3)',
@@ -41,7 +74,7 @@ export const PRICING_PLANS: PricingPlan[] = [
   },
   {
     id: 'b2c_tier2',
-    name: 'Bản Đồ Trọn Vẹn & AI Coach',
+    name: 'Bản Đồ Toàn Diện & Kế Hoạch Chuyển Hóa',
     nameVi: 'Bản Đồ Giải Pháp Toàn Diện (Tier 2/3)',
     type: 'b2c_single',
     priceVnd: 199000,
@@ -68,8 +101,8 @@ export const PRICING_PLANS: PricingPlan[] = [
     badge: 'Tiết Kiệm 55%',
     features: [
       '10 lượt luận giải chuyên sâu trọn vẹn 3 tầng',
-      'Tính năng độc quyền: Phân tích Tương hợp vợ chồng / con cái',
       'Phân tích tiềm năng & thiên hướng giáo dục cho trẻ nhỏ',
+      'Thấu hiểu bản sắc và định hướng phát triển từng thành viên',
       'Không giới hạn thời gian sử dụng 10 lượt',
       'Xuất 10 file PDF chuyên biệt cho từng thành viên',
       'Ưu tiên tốc độ xử lý & Xuất bản báo cáo tức thì'
@@ -77,8 +110,8 @@ export const PRICING_PLANS: PricingPlan[] = [
   },
   {
     id: 'b2c_family',
-    name: 'Gói Tương Hợp Gia Đình (5 Hồ Sơ)',
-    nameVi: 'Gói Tương Hợp Gia Đình (5 Bản Đồ)',
+    name: 'Gói Gia Đình Thấu Hiểu (5 Hồ Sơ)',
+    nameVi: 'Gói Gia Đình Thấu Hiểu (5 Bản Đồ)',
     type: 'b2c_family',
     priceVnd: 499000,
     priceUsd: 19.99,
@@ -86,8 +119,8 @@ export const PRICING_PLANS: PricingPlan[] = [
     credits: 5,
     features: [
       'Mở khóa trọn bộ 5 hồ sơ Tier 3 cho người thân',
-      'Phân tích tam giác tương hợp Vợ - Chồng',
       'Định hướng tiềm năng & cách giáo dục con cái',
+      'Thấu hiểu tâm lý và điểm mạnh của từng thành viên',
       'Xuất PDF gia đình trọn vẹn'
     ]
   },

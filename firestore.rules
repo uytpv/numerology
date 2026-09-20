@@ -12,35 +12,77 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isAuthenticated() && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return isAuthenticated() && (
+        request.auth.token.email in [
+          'admin@lifemap.vn',
+          'uytpv@gmail.com',
+          'traphucvinhuy012022@gmail.com'
+        ] ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
     }
 
     function isCoach() {
-      return isAuthenticated() && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'coach' || isAdmin());
+      return isAuthenticated() && (
+        isAdmin() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'coach' ||
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isCoach == true))
+      );
     }
 
     // Rules for users collection
     match /users/{uid} {
-      allow read: if isOwner(uid) || isAdmin() || true;
-      allow write: if isOwner(uid) || isAdmin();
+      allow read: if isAuthenticated() && (isOwner(uid) || isAdmin());
+      // Admin hoặc email admin được ghi toàn bộ
+      allow create: if isAuthenticated() && (
+        isAdmin() ||
+        (isOwner(uid) && request.resource.data.role == 'user' && request.resource.data.credits == 0) ||
+        (isOwner(uid) && !request.resource.data.keys().hasAny(['role', 'credits', 'reportCredits', 'isCoach', 'hasCrm', 'hasWhiteLabel', 'hasSynastry', 'membershipPlanId', 'membershipExpiresAt']))
+      );
+      allow update: if isAdmin() || (
+        isOwner(uid) && 
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'role', 'credits', 'reportCredits', 'isCoach', 'hasCrm', 
+          'hasWhiteLabel', 'hasSynastry', 'membershipPlanId', 'membershipExpiresAt'
+        ])
+      );
+      allow delete: if isAdmin();
     }
 
-    // Rules for customers collection
+    // Rules for customers collection (báo cáo và danh bạ khách hàng của user / coach)
     match /customers/{customerId} {
+      allow read: if (resource.data.user_id == null) ||
+                     (isAuthenticated() && (resource.data.user_id == request.auth.uid || isAdmin()));
+      allow create: if isAuthenticated() && (request.resource.data.user_id == request.auth.uid || isAdmin());
+      allow update, delete: if isAuthenticated() && (resource.data.user_id == request.auth.uid || isAdmin());
+    }
+
+    // Rules for pricing_plans collection
+    match /pricing_plans/{planId} {
       allow read: if true;
-      allow create: if true;
-      allow update, delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow write: if isAdmin();
     }
 
     // Rules for orders collection
     match /orders/{orderId} {
-      allow read: if true;
-      allow create: if true;
-      allow update: if isAdmin();
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      // Client chỉ được tạo đơn hàng mới với trạng thái PENDING
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.status == 'PENDING';
+      // Cập nhật: Admin hoặc chủ đơn hàng hủy/hết hạn đơn PENDING
+      allow update: if isAdmin() || (
+        isAuthenticated() && resource.data.userId == request.auth.uid &&
+        request.resource.data.status in ['CANCELLED', 'EXPIRED'] &&
+        resource.data.status == 'PENDING'
+      );
+      // Xóa: Admin hoặc chủ đơn hàng dọn dẹp các đơn PENDING, CANCELLED, EXPIRED (không được xóa đơn PAID)
+      allow delete: if isAdmin() || (
+        isAuthenticated() && resource.data.userId == request.auth.uid &&
+        resource.data.status in ['PENDING', 'CANCELLED', 'EXPIRED']
+      );
     }
 
     // Rules for leads collection

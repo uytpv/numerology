@@ -3,17 +3,23 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import { calculateNumerologyMap } from '@/lib/numerologyReportGenerator';
 import PricingSection from '@/components/PricingSection';
-import { Briefcase, UserPlus, Palette, Package, Link2, Users, FileText, Search, Sparkles, CheckCircle2, Award, Calendar, Phone, Mail, Home } from 'lucide-react';
+import { 
+  Briefcase, UserPlus, Palette, Package, Link2, Users, FileText, 
+  Search, Sparkles, CheckCircle2, Award, Calendar, Phone, Mail, 
+  Home, Lock, ArrowRight, ShieldAlert, UserCheck, Loader2
+} from 'lucide-react';
 
 export default function CoachPortalPage() {
   const { user, loginWithGoogle, logout, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<'crm' | 'create' | 'branding' | 'packages' | 'form_embed' | 'community'>('crm');
 
   const [clients, setClients] = useState<any[]>([]);
+  const [userProfile, setUserProfile] = useState<any>(null);
   const [isLoadingClients, setIsLoadingClients] = useState(false);
+  const [isCheckingEligibility, setIsCheckingEligibility] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
   // Form create client state
@@ -33,10 +39,22 @@ export default function CoachPortalPage() {
   const [brandingSaved, setBrandingSaved] = useState(false);
 
   useEffect(() => {
-    async function loadClients() {
-      if (!user) return;
+    async function loadData() {
+      if (!user) {
+        setIsCheckingEligibility(false);
+        return;
+      }
       setIsLoadingClients(true);
+      setIsCheckingEligibility(true);
       try {
+        // 1. Tải thông tin tài khoản chuyên gia
+        const userDocRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userDocRef);
+        if (userSnap.exists()) {
+          setUserProfile(userSnap.data());
+        }
+
+        // 2. Tải danh sách hồ sơ của chuyên gia
         const q = query(
           collection(db, 'customers'),
           where('user_id', '==', user.uid)
@@ -46,13 +64,30 @@ export default function CoachPortalPage() {
         list.sort((a: any, b: any) => (b.created_at?.seconds || 0) - (a.created_at?.seconds || 0));
         setClients(list);
       } catch (err) {
-        console.error('Lỗi khi tải danh sách khách hàng CRM:', err);
+        console.error('Lỗi khi tải dữ liệu chuyên gia CRM:', err);
       } finally {
         setIsLoadingClients(false);
+        setIsCheckingEligibility(false);
       }
     }
-    loadClients();
+    loadData();
   }, [user]);
+
+  // Điều kiện kiểm tra tư cách Chuyên Gia (Phải có tối thiểu 1 bài xuất của chính mình hoặc nạp gói)
+  const hasPaidReport = clients.some(c => 
+    c.is_paid === true || 
+    c.tier === 'paid' || 
+    c.tier === 'coach' || 
+    (typeof c.unlockedTier === 'number' && c.unlockedTier >= 3)
+  );
+
+  const hasCoachEntitlement = Boolean(
+    userProfile?.hasCrm || 
+    userProfile?.membershipPlanId || 
+    (typeof userProfile?.credits === 'number' && userProfile.credits > 0)
+  );
+
+  const isEligible = Boolean(hasPaidReport || hasCoachEntitlement);
 
   const handleCreateClient = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -193,31 +228,115 @@ export default function CoachPortalPage() {
 
       {/* MAIN CONTENT AREA */}
       <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-        {/* HEADER STATS */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="card-surface p-5 rounded-3xl">
-            <div className="text-[#5F736E] text-xs font-semibold mb-1">Tổng Hồ Sơ Đã Khai Vấn</div>
-            <div className="text-2xl font-bold font-heading text-[#013E37]">{clients.length} khách</div>
+        {authLoading || isCheckingEligibility ? (
+          <div className="min-h-[50vh] flex flex-col items-center justify-center gap-4 text-[#5F736E]">
+            <Loader2 className="w-8 h-8 animate-spin text-[#267D71]" />
+            <p className="text-sm font-medium">Đang xác thực thông tin tài khoản Chuyên Gia...</p>
           </div>
-          <div className="card-surface p-5 rounded-3xl">
-            <div className="text-[#5F736E] text-xs font-semibold mb-1">Số Lượng Báo Cáo Khả Dụng</div>
-            <div className="text-2xl font-bold font-heading text-[#267D71]">Không Giới Hạn</div>
+        ) : !user ? (
+          /* GATE 1: YÊU CẦU ĐĂNG NHẬP */
+          <div className="max-w-xl mx-auto my-12 p-8 sm:p-12 rounded-3xl bg-white border border-[#E2E8E5] text-center space-y-6 shadow-xl">
+            <div className="w-16 h-16 rounded-3xl bg-[#EEF5F3] text-[#013E37] flex items-center justify-center mx-auto text-3xl shadow-sm border border-[#267D71]/20">
+              🔒
+            </div>
+            <div className="space-y-2">
+              <div className="text-xs font-bold uppercase tracking-wider text-[#267D71]">YÊU CẦU ĐĂNG NHẬP</div>
+              <h2 className="text-2xl sm:text-3xl font-bold font-heading text-[#0D2B26]">
+                Cổng Quản Trị Chuyên Gia & Life Coach
+              </h2>
+              <p className="text-sm text-[#5F736E] leading-relaxed">
+                Vui lòng đăng nhập bằng tài khoản Google để truy cập hệ thống CRM quản lý khách hàng, công cụ xuất báo cáo và cấu hình White-label.
+              </p>
+            </div>
+            <button
+              onClick={loginWithGoogle}
+              className="w-full sm:w-auto px-8 py-4 rounded-2xl btn-primary text-sm font-bold shadow-md flex items-center justify-center gap-2 mx-auto cursor-pointer"
+            >
+              <UserPlus size={18} />
+              <span>Đăng Nhập Bằng Google Để Tiếp Tục</span>
+            </button>
           </div>
-          <div className="card-surface p-5 rounded-3xl">
-            <div className="text-[#5F736E] text-xs font-semibold mb-1">Thương Hiệu Riêng (White-label)</div>
-            <div className="text-sm font-bold text-[#267D71] flex items-center gap-1.5 mt-1">
-              <CheckCircle2 size={16} />
-              <span>Đã Kích Hoạt</span>
+        ) : !isEligible ? (
+          /* GATE 2: YÊU CẦU CÓ TỐI THIỂU 1 BÀI XUẤT 39K CỦA CHÍNH MÌNH */
+          <div className="max-w-2xl mx-auto my-10 p-8 sm:p-12 rounded-3xl bg-white border-2 border-[#267D71]/40 text-center space-y-8 shadow-2xl relative overflow-hidden">
+            <div className="w-20 h-20 rounded-3xl bg-[#FFEFB3] text-[#013E37] flex items-center justify-center mx-auto text-4xl shadow-sm border border-[#F9E79F]">
+              🌟
+            </div>
+
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#EEF5F3] border border-[#267D71]/30 text-[#013E37] text-xs font-bold uppercase tracking-wider">
+                <Sparkles size={14} className="text-[#267D71]" />
+                <span>Yêu Cầu Tiên Quyết Dành Cho Life Coach</span>
+              </div>
+              <h2 className="text-2xl sm:text-4xl font-bold font-heading text-[#0D2B26] tracking-tight">
+                Thấu Hiểu Bản Thân Trước Khi Khai Vấn Cho Người Khác
+              </h2>
+              <p className="text-sm sm:text-base text-[#5F736E] leading-relaxed max-w-xl mx-auto">
+                Để kích hoạt <strong>Cổng Chuyên Gia Life Coach</strong> và sử dụng toàn bộ công cụ CRM, bạn cần sở hữu tối thiểu <strong>01 Bản Báo Cáo Luận Giải Độc Bản Tầng 3 (39.000đ)</strong>. Khách hàng đầu tiên và quan trọng nhất trên hành trình của bạn chính là <strong>chính bản thân bạn</strong>!
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 text-left text-xs bg-[#FAF8F5] p-5 rounded-2xl border border-[#E2E8E5]">
+              <div className="space-y-1">
+                <div className="font-bold text-[#013E37]">1. Thấu hiểu bản sắc</div>
+                <p className="text-[#5F736E]">Nắm trọn 21 chỉ số Pythagoras và sứ mệnh cuộc đời của chính mình.</p>
+              </div>
+              <div className="space-y-1">
+                <div className="font-bold text-[#267D71]">2. Trải nghiệm tiêu chuẩn</div>
+                <p className="text-[#5F736E]">Hiểu rõ cấu trúc luận giải 5 chương chuẩn ICF trước khi tư vấn khách.</p>
+              </div>
+              <div className="space-y-1">
+                <div className="font-bold text-[#8C6A81]">3. Khách hàng #1 trong CRM</div>
+                <p className="text-[#5F736E]">Hồ sơ của bạn sẽ tự động được lưu làm hồ sơ tiên phong trong danh bạ.</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 pt-2">
+              <a
+                href="/"
+                className="w-full sm:w-auto px-8 py-4 rounded-2xl btn-primary text-sm font-bold shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>🚀 Xuất Bản Báo Cáo Cá Nhân (39.000đ)</span>
+                <ArrowRight size={16} />
+              </a>
+              <a
+                href="/pricing"
+                className="w-full sm:w-auto px-6 py-4 rounded-2xl bg-[#EEF5F3] hover:bg-[#E2EFEA] border border-[#267D71]/30 text-[#013E37] text-sm font-bold flex items-center justify-center gap-2 cursor-pointer transition-all"
+              >
+                <span>💼 Mua Gói Nạp Sỉ / Hội Viên</span>
+              </a>
             </div>
           </div>
-          <div className="card-surface p-5 rounded-3xl">
-            <div className="text-[#5F736E] text-xs font-semibold mb-1">Hạng Thành Viên</div>
-            <div className="text-sm font-bold font-heading text-[#013E37] flex items-center gap-1.5 mt-1">
-              <Award size={16} className="text-[#F9E79F]" />
-              <span>COACH PRO VIP</span>
+        ) : (
+          /* NỘI DUNG TOÀN DIỆN CHO CHUYÊN GIA HỢP LỆ */
+          <>
+            {/* HEADER STATS */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="card-surface p-5 rounded-3xl">
+                <div className="text-[#5F736E] text-xs font-semibold mb-1">Tổng Hồ Sơ Đã Khai Vấn</div>
+                <div className="text-2xl font-bold font-heading text-[#013E37]">{clients.length} khách</div>
+              </div>
+              <div className="card-surface p-5 rounded-3xl">
+                <div className="text-[#5F736E] text-xs font-semibold mb-1">Số Lượng Báo Cáo Khả Dụng</div>
+                <div className="text-2xl font-bold font-heading text-[#267D71]">
+                  {typeof userProfile?.credits === 'number' ? `${userProfile.credits} lượt` : '100% Khả dụng'}
+                </div>
+              </div>
+              <div className="card-surface p-5 rounded-3xl">
+                <div className="text-[#5F736E] text-xs font-semibold mb-1">Thương Hiệu Riêng (White-label)</div>
+                <div className="text-sm font-bold text-[#267D71] flex items-center gap-1.5 mt-1">
+                  <CheckCircle2 size={16} />
+                  <span>Đã Kích Hoạt</span>
+                </div>
+              </div>
+              <div className="card-surface p-5 rounded-3xl">
+                <div className="text-[#5F736E] text-xs font-semibold mb-1">Hạng Thành Viên</div>
+                <div className="text-sm font-bold font-heading text-[#013E37] flex items-center gap-1.5 mt-1">
+                  <Award size={16} className="text-[#F9E79F]" />
+                  <span>{userProfile?.membershipPlanId ? 'COACH PRO VIP' : 'CHUYÊN GIA LIÊN KẾT'}</span>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
         {/* NAVIGATION TABS */}
         <div className="flex gap-2 border-b border-[#E2E8E5] pb-3 overflow-x-auto">
@@ -643,6 +762,8 @@ export default function CoachPortalPage() {
               ))}
             </div>
           </div>
+        )}
+          </>
         )}
       </div>
     </div>

@@ -15,8 +15,14 @@ import {
   Search, Edit, Save, ArrowLeft, RefreshCw, AlertCircle, CreditCard, 
   CheckCircle2, Clock, XCircle, ShieldCheck, Home, Plus, Trash2, 
   Sparkles, DollarSign, TrendingUp, Filter, Check, Award, Database, 
-  UploadCloud, CheckCheck
+  UploadCloud, CheckCheck, Package, Tag, Layers, ToggleLeft, ToggleRight,
+  Gift, CheckSquare, Square, Crown, Briefcase, Star
 } from 'lucide-react';
+import { 
+  PricingPlan, SYSTEM_FEATURES, DEFAULT_PRICING_PLANS, 
+  getPricingPlans, savePricingPlan, deletePricingPlan, 
+  initializeDefaultPricingPlans, FeatureKey 
+} from '@/lib/pricingEngine';
 
 const knowledgeBase = rawKnowledgeBase as Record<string, any>;
 
@@ -130,13 +136,20 @@ export default function AdminDashboard() {
   const { user, isAdmin, loading, loginWithGoogle, logout, grantAdminAccess } = useAuth();
   const { t } = useTranslation();
 
-  const [activeSubTab, setActiveSubTab] = useState<'orders' | 'customers' | 'users' | 'indicators' | 'keywords'>('orders');
+  const [activeSubTab, setActiveSubTab] = useState<'orders' | 'customers' | 'users' | 'packages' | 'indicators' | 'keywords'>('orders');
   
   // State Quản lý Đơn hàng & Giao dịch
   const [orders, setOrders] = useState<any[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [orderFilter, setOrderFilter] = useState<'all' | 'PAID' | 'PENDING' | 'CANCELLED'>('all');
   const [orderSearchQuery, setOrderSearchQuery] = useState('');
+
+  // State Quản Lý Gói Dịch Vụ & Platform Builder
+  const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>(DEFAULT_PRICING_PLANS);
+  const [loadingPlans, setLoadingPlans] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<PricingPlan | null>(null);
+  const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
+  const [planFormStatus, setPlanFormStatus] = useState<string | null>(null);
 
   // State Quản lý khách hàng
   const [customers, setCustomers] = useState<any[]>([]);
@@ -347,11 +360,81 @@ export default function AdminDashboard() {
     }
   };
 
+  // Tải danh sách Gói dịch vụ từ Pricing Engine
+  const fetchPricingPlans = async () => {
+    setLoadingPlans(true);
+    try {
+      const list = await getPricingPlans();
+      setPricingPlans(list);
+    } catch (err) {
+      console.error('Lỗi tải danh sách gói:', err);
+    } finally {
+      setLoadingPlans(false);
+    }
+  };
+
+  // Lưu hoặc cập nhật Gói dịch vụ
+  const handleSavePricingPlan = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPlan) return;
+    try {
+      setPlanFormStatus('Đang lưu gói dịch vụ...');
+      await savePricingPlan(editingPlan);
+      setPlanFormStatus('✅ Đã lưu cấu hình gói thành công!');
+      fetchPricingPlans();
+      setTimeout(() => {
+        setIsPlanModalOpen(false);
+        setPlanFormStatus(null);
+      }, 800);
+    } catch (err) {
+      console.error('Lỗi lưu gói:', err);
+      setPlanFormStatus('❌ Lỗi khi lưu gói!');
+    }
+  };
+
+  // Xóa Gói dịch vụ
+  const handleDeletePricingPlan = async (planId: string) => {
+    if (!confirm(`Bạn có chắc chắn muốn xóa gói [${planId}] khỏi hệ thống?`)) return;
+    try {
+      await deletePricingPlan(planId);
+      fetchPricingPlans();
+    } catch (err) {
+      console.error('Lỗi xóa gói:', err);
+    }
+  };
+
+  // Khôi phục toàn bộ bảng giá chuẩn 3 trục
+  const handleResetDefaultPricingPlans = async () => {
+    if (!confirm('Khôi phục toàn bộ Bảng giá Chuẩn 3 Trục (Cá nhân 39k, Gia đình 149k, Nạp sỉ & Hội viên)? Toàn bộ cấu hình tùy biến sẽ được ghi đè.')) return;
+    try {
+      setLoadingPlans(true);
+      await initializeDefaultPricingPlans();
+      await fetchPricingPlans();
+      alert('Đã khôi phục thành công bảng giá chuẩn 3 trục lên Firestore!');
+    } catch (err) {
+      console.error('Lỗi khôi phục bảng giá:', err);
+    } finally {
+      setLoadingPlans(false);
+    }
+  };
+
+  // Bật/tắt trạng thái hiển thị của gói
+  const handleTogglePlanActive = async (plan: PricingPlan) => {
+    try {
+      const updated = { ...plan, isActive: !plan.isActive };
+      await savePricingPlan(updated);
+      setPricingPlans(prev => prev.map(p => p.id === plan.id ? updated : p));
+    } catch (err) {
+      console.error('Lỗi đổi trạng thái gói:', err);
+    }
+  };
+
   useEffect(() => {
     if (isAdmin) {
       if (activeSubTab === 'orders') fetchOrders();
       else if (activeSubTab === 'customers') fetchCustomers();
       else if (activeSubTab === 'users') fetchUsers();
+      else if (activeSubTab === 'packages') fetchPricingPlans();
       else if (activeSubTab === 'indicators') fetchIndicators();
       else if (activeSubTab === 'keywords') {
         fetchIndicators();
@@ -804,6 +887,18 @@ export default function AdminDashboard() {
           >
             <Award size={16} />
             <span>Người Dùng & Phân Quyền ({usersList.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('packages')}
+            className={`py-3 px-5 rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${
+              activeSubTab === 'packages'
+                ? 'bg-[#013E37] text-white shadow-md'
+                : 'text-[#5F736E] hover:text-[#013E37] hover:bg-[#EEF5F3]'
+            }`}
+          >
+            <Package size={16} />
+            <span>Quản Trị Gói Bán Hàng ({pricingPlans.length})</span>
           </button>
 
           <button
@@ -1393,6 +1488,449 @@ export default function AdminDashboard() {
                 </button>
               </form>
             )}
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* TAB 6: QUẢN TRỊ GÓI BÁN HÀNG & DYNAMIC PACKAGE BUILDER */}
+        {/* ========================================================================= */}
+        {activeSubTab === 'packages' && (
+          <div className="card-surface rounded-3xl p-6 sm:p-8 border border-[#E2E8E5] shadow-xl space-y-6 animate-in fade-in duration-200">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-xl font-bold font-heading text-[#0D2B26] flex items-center gap-2">
+                  <Package className="text-[#267D71]" size={22} />
+                  <span>Quản Trị Bảng Giá & Nền Tảng Gói Bán Hàng</span>
+                </h3>
+                <p className="text-xs text-[#5F736E] mt-0.5">
+                  Tự do thiết kế gói dịch vụ, gán quyền lợi, cấu hình số lượt bài và bật/tắt tính năng theo ma trận 3 trục.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={handleResetDefaultPricingPlans}
+                  disabled={loadingPlans}
+                  className="py-2.5 px-4 rounded-xl border border-[#E2E8E5] hover:bg-[#EEF5F3] text-xs font-bold text-[#5F736E] hover:text-[#0D2B26] flex items-center gap-2 transition-all cursor-pointer"
+                  title="Khôi phục lại 7 gói chuẩn 3 trục"
+                >
+                  <RefreshCw size={14} className={loadingPlans ? 'animate-spin' : ''} />
+                  <span>Khôi Phục Mặc Định</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    const newId = `custom_plan_${Date.now()}`;
+                    setEditingPlan({
+                      id: newId,
+                      name: 'Gói Dịch Vụ Mới',
+                      badge: 'Mới',
+                      price: 99000,
+                      originalPrice: 199000,
+                      periodLabel: 'bài báo cáo độc bản',
+                      targetAudience: 'Dành cho khách hàng mục tiêu',
+                      type: 'b2c_single',
+                      credits: 1,
+                      isPopular: false,
+                      isActive: true,
+                      displayOrder: pricingPlans.length + 1,
+                      features: [
+                        'Mở khóa báo cáo độc bản Tầng 3',
+                        'Xuất file PDF chuẩn in ấn cao cấp',
+                        'Lưu trữ hồ sơ vĩnh viễn'
+                      ],
+                      featureFlags: {
+                        report_quota: 1,
+                        topic_expansion: 1,
+                        synastry_map: false,
+                        white_label: false,
+                        coach_crm: false,
+                        energy_calendar_365: false,
+                        consulting_questions: 3,
+                      }
+                    });
+                    setIsPlanModalOpen(true);
+                  }}
+                  className="py-2.5 px-5 rounded-xl btn-primary text-xs font-bold flex items-center gap-2 shadow-md cursor-pointer"
+                >
+                  <Plus size={15} />
+                  <span>Tạo Gói Mới</span>
+                </button>
+              </div>
+            </div>
+
+            {/* BẢNG TỔNG KẾT NHANH MA TRẬN GÓI */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 rounded-2xl bg-[#EEF5F3] border border-[#267D71]/20 flex items-center justify-between">
+                <div>
+                  <div className="text-[11px] font-bold text-[#267D71] uppercase tracking-wider">Cá Nhân & Gia Đình (B2C)</div>
+                  <div className="text-xl font-extrabold text-[#013E37]">
+                    {pricingPlans.filter(p => p.type === 'b2c_single' || p.type === 'b2c_addon' || p.type === 'family').length} gói
+                  </div>
+                </div>
+                <Star size={24} className="text-[#267D71] opacity-70" />
+              </div>
+
+              <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2E8E5] flex items-center justify-between">
+                <div>
+                  <div className="text-[11px] font-bold text-[#5F736E] uppercase tracking-wider">Chuyên Gia Nạp Sỉ (Wholesale)</div>
+                  <div className="text-xl font-extrabold text-[#0D2B26]">
+                    {pricingPlans.filter(p => p.type === 'coach_wholesale').length} gói
+                  </div>
+                </div>
+                <Briefcase size={24} className="text-[#0D2B26] opacity-70" />
+              </div>
+
+              <div className="p-4 rounded-2xl bg-[#FFEFB3]/40 border border-[#F9E79F] flex items-center justify-between">
+                <div>
+                  <div className="text-[11px] font-bold text-[#013E37] uppercase tracking-wider">Hội Viên Nền Tảng (SaaS)</div>
+                  <div className="text-xl font-extrabold text-[#013E37]">
+                    {pricingPlans.filter(p => p.type === 'coach_subscription').length} gói
+                  </div>
+                </div>
+                <Crown size={24} className="text-[#013E37] opacity-70" />
+              </div>
+            </div>
+
+            {/* DANH SÁCH CÁC GÓI ĐANG CÓ */}
+            {loadingPlans ? (
+              <div className="py-12 text-center text-[#5F736E]">
+                <Loader2 size={24} className="mx-auto animate-spin text-[#267D71] mb-2" />
+                <p className="text-xs">Đang đồng bộ bảng giá từ cơ sở dữ liệu...</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-[#E2E8E5] text-[#5F736E] font-bold bg-[#FAF8F5]">
+                      <th className="py-3.5 px-4">Tên Gói & ID</th>
+                      <th className="py-3.5 px-3">Phân Loại</th>
+                      <th className="py-3.5 px-3">Giá Bán / Gốc</th>
+                      <th className="py-3.5 px-3">Lượt Bài (Credits)</th>
+                      <th className="py-3.5 px-3">Tính Năng Bật</th>
+                      <th className="py-3.5 px-3 text-center">Trạng Thái</th>
+                      <th className="py-3.5 px-4 text-right">Thao Tác</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#E2E8E5]">
+                    {pricingPlans.map((plan) => {
+                      const activeFeatureCount = Object.values(plan.featureFlags || {}).filter(v => v === true || (typeof v === 'number' && v > 0)).length;
+                      return (
+                        <tr key={plan.id} className="hover:bg-[#FAF8F5]/80 transition-all">
+                          <td className="py-3.5 px-4">
+                            <div className="font-bold text-sm text-[#0D2B26] flex items-center gap-1.5">
+                              <span>{plan.name}</span>
+                              {plan.badge && (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-[#FFEFB3] text-[#013E37] border border-[#F9E79F]">
+                                  {plan.badge}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[10px] font-mono text-[#5F736E] mt-0.5">{plan.id}</div>
+                            <div className="text-[11px] text-[#5F736E] line-clamp-1 mt-0.5">{plan.targetAudience}</div>
+                          </td>
+
+                          <td className="py-3.5 px-3">
+                            <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${
+                              plan.type === 'b2c_single' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                              plan.type === 'b2c_addon' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                              plan.type === 'family' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                              plan.type === 'coach_wholesale' ? 'bg-purple-50 text-purple-700 border border-purple-200' :
+                              'bg-amber-100 text-[#013E37] border border-[#F9E79F]'
+                            }`}>
+                              {plan.type === 'b2c_single' ? 'Cá Nhân' :
+                               plan.type === 'b2c_addon' ? 'Addon Mở Rộng' :
+                               plan.type === 'family' ? 'Gia Đình' :
+                               plan.type === 'coach_wholesale' ? 'Nạp Sỉ' : 'Hội Viên Năm'}
+                            </span>
+                          </td>
+
+                          <td className="py-3.5 px-3">
+                            <div className="font-bold text-[#013E37] text-sm">
+                              {plan.price.toLocaleString('vi-VN')} đ
+                            </div>
+                            {plan.originalPrice && (
+                              <div className="text-[10px] text-[#93A39F] line-through">
+                                {plan.originalPrice.toLocaleString('vi-VN')} đ
+                              </div>
+                            )}
+                            <div className="text-[10px] text-[#5F736E]">/{plan.periodLabel}</div>
+                          </td>
+
+                          <td className="py-3.5 px-3">
+                            <span className="font-bold text-sm text-[#0D2B26] font-mono">
+                              {plan.credits} bài
+                            </span>
+                          </td>
+
+                          <td className="py-3.5 px-3">
+                            <div className="flex items-center gap-1">
+                              <span className="px-2 py-0.5 rounded-md bg-[#EEF5F3] text-[#267D71] font-bold text-[11px]">
+                                {activeFeatureCount} / 7 tính năng
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-[#5F736E] mt-0.5">
+                              {plan.featureFlags?.white_label ? '🏷️ White-label ' : ''}
+                              {plan.featureFlags?.coach_crm ? '💼 CRM ' : ''}
+                              {plan.featureFlags?.energy_calendar_365 ? '📅 Lịch 365 ' : ''}
+                              {plan.featureFlags?.synastry_map ? '💞 Tương hợp' : ''}
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 px-3 text-center">
+                            <button
+                              onClick={() => handleTogglePlanActive(plan)}
+                              className={`px-3 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 mx-auto ${
+                                plan.isActive
+                                  ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+                                  : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                              }`}
+                            >
+                              {plan.isActive ? <ToggleRight size={14} className="text-emerald-700" /> : <ToggleLeft size={14} />}
+                              <span>{plan.isActive ? 'Đang bán' : 'Tạm ẩn'}</span>
+                            </button>
+                          </td>
+
+                          <td className="py-3.5 px-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => {
+                                  setEditingPlan({ ...plan });
+                                  setIsPlanModalOpen(true);
+                                }}
+                                className="p-2 rounded-xl bg-white hover:bg-[#EEF5F3] text-[#013E37] border border-[#E2E8E5] transition-all cursor-pointer shadow-xs"
+                                title="Chỉnh sửa cấu hình gói"
+                              >
+                                <Edit size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleDeletePricingPlan(plan.id)}
+                                className="p-2 rounded-xl bg-white hover:bg-red-50 text-red-600 border border-[#E2E8E5] transition-all cursor-pointer shadow-xs"
+                                title="Xóa gói"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* MODAL CHỈNH SỬA / TẠO MỚI GÓI DỊCH VỤ */}
+        {isPlanModalOpen && editingPlan && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0D2B26]/60 backdrop-blur-sm overflow-y-auto">
+            <div className="bg-[#FFFFFF] border border-[#E2E8E5] rounded-3xl max-w-3xl w-full p-6 sm:p-8 relative shadow-2xl my-8 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between border-b border-[#E2E8E5] pb-4 mb-6">
+                <div>
+                  <h3 className="text-lg font-bold font-heading text-[#0D2B26]">
+                    Cấu Hình Gói Dịch Vụ: {editingPlan.name}
+                  </h3>
+                  <p className="text-xs text-[#5F736E]">Mã định danh hệ thống: {editingPlan.id}</p>
+                </div>
+                <button
+                  onClick={() => setIsPlanModalOpen(false)}
+                  className="p-2 text-[#5F736E] hover:text-[#0D2B26] rounded-full transition-all cursor-pointer text-xl"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleSavePricingPlan} className="space-y-6">
+                {/* THÔNG TIN CƠ BẢN */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-[#0D2B26] mb-1">Mã Gói (ID duy nhất):</label>
+                    <input
+                      type="text"
+                      value={editingPlan.id}
+                      onChange={(e) => setEditingPlan({ ...editingPlan, id: e.target.value })}
+                      required
+                      className="w-full p-3 bg-white border border-[#E2E8E5] rounded-xl text-xs font-mono font-bold text-[#0D2B26] focus:outline-none focus:border-[#267D71]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#0D2B26] mb-1">Tên Gói Hiển Thị:</label>
+                    <input
+                      type="text"
+                      value={editingPlan.name}
+                      onChange={(e) => setEditingPlan({ ...editingPlan, name: e.target.value })}
+                      required
+                      className="w-full p-3 bg-white border border-[#E2E8E5] rounded-xl text-xs font-bold text-[#0D2B26] focus:outline-none focus:border-[#267D71]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#0D2B26] mb-1">Phân Loại Gói (Model Type):</label>
+                    <select
+                      value={editingPlan.type}
+                      onChange={(e) => setEditingPlan({ ...editingPlan, type: e.target.value as any })}
+                      className="w-full p-3 bg-white border border-[#E2E8E5] rounded-xl text-xs font-bold text-[#0D2B26] focus:outline-none focus:border-[#267D71]"
+                    >
+                      <option value="b2c_single">Cá Nhân Khám Phá (1 bài Mass Adoption)</option>
+                      <option value="b2c_addon">Addon Mở Rộng Trọng Tâm (Micro-Addon)</option>
+                      <option value="family">Gia Đình Thấu Hiểu (Combo 5 bài)</option>
+                      <option value="coach_wholesale">Chuyên Gia Nạp Sỉ (Wholesale Credits)</option>
+                      <option value="coach_subscription">Hội Viên Nền Tảng Hàng Năm (SaaS)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#0D2B26] mb-1">Huy Hiệu (Badge nổi bật):</label>
+                    <input
+                      type="text"
+                      value={editingPlan.badge || ''}
+                      onChange={(e) => setEditingPlan({ ...editingPlan, badge: e.target.value })}
+                      placeholder="Ví dụ: Phổ Biến Nhất, Tiết Kiệm 50%..."
+                      className="w-full p-3 bg-white border border-[#E2E8E5] rounded-xl text-xs text-[#0D2B26] focus:outline-none focus:border-[#267D71]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#0D2B26] mb-1">Giá Bán Thực Tế (VNĐ):</label>
+                    <input
+                      type="number"
+                      value={editingPlan.price}
+                      onChange={(e) => setEditingPlan({ ...editingPlan, price: Number(e.target.value) })}
+                      required
+                      className="w-full p-3 bg-white border border-[#E2E8E5] rounded-xl text-xs font-bold text-[#013E37] focus:outline-none focus:border-[#267D71]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#0D2B26] mb-1">Giá Gốc Gạch Ngang (VNĐ):</label>
+                    <input
+                      type="number"
+                      value={editingPlan.originalPrice || 0}
+                      onChange={(e) => setEditingPlan({ ...editingPlan, originalPrice: Number(e.target.value) })}
+                      className="w-full p-3 bg-white border border-[#E2E8E5] rounded-xl text-xs text-[#5F736E] focus:outline-none focus:border-[#267D71]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#0D2B26] mb-1">Đơn Vị Thời Gian / Chu Kỳ:</label>
+                    <input
+                      type="text"
+                      value={editingPlan.periodLabel}
+                      onChange={(e) => setEditingPlan({ ...editingPlan, periodLabel: e.target.value })}
+                      placeholder="Ví dụ: bài báo cáo độc bản, năm hội viên..."
+                      className="w-full p-3 bg-white border border-[#E2E8E5] rounded-xl text-xs text-[#0D2B26] focus:outline-none focus:border-[#267D71]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#0D2B26] mb-1">Số Bài Tặng Kèm (Credits):</label>
+                    <input
+                      type="number"
+                      value={editingPlan.credits}
+                      onChange={(e) => setEditingPlan({ ...editingPlan, credits: Number(e.target.value) })}
+                      required
+                      className="w-full p-3 bg-white border border-[#E2E8E5] rounded-xl text-xs font-bold text-[#0D2B26] focus:outline-none focus:border-[#267D71]"
+                    />
+                  </div>
+                </div>
+
+                {/* MA TRẬN 7 TÍNH NĂNG KỸ THUẬT */}
+                <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2E8E5] space-y-3">
+                  <div className="text-xs font-bold text-[#0D2B26] uppercase tracking-wider flex items-center gap-1.5">
+                    <Layers size={14} className="text-[#267D71]" />
+                    <span>Ma Trận Tính Năng & Hạn Mức Hệ Thống (Feature Matrix)</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    {SYSTEM_FEATURES.map((feat) => {
+                      const currentVal = editingPlan.featureFlags?.[feat.key];
+                      const isEnabled = typeof currentVal === 'boolean' ? currentVal : (typeof currentVal === 'number' && currentVal > 0);
+
+                      return (
+                        <div key={feat.key} className="p-3 bg-white rounded-xl border border-[#E2E8E5] flex items-center justify-between">
+                          <div className="pr-2">
+                            <div className="font-bold text-xs text-[#0D2B26]">{feat.label}</div>
+                            <div className="text-[10px] text-[#5F736E] line-clamp-1">{feat.description}</div>
+                          </div>
+
+                          {feat.isNumeric ? (
+                            <input
+                              type="number"
+                              value={typeof currentVal === 'number' ? currentVal : 0}
+                              onChange={(e) => {
+                                const num = Number(e.target.value);
+                                setEditingPlan({
+                                  ...editingPlan,
+                                  featureFlags: {
+                                    ...editingPlan.featureFlags,
+                                    [feat.key]: num
+                                  }
+                                });
+                              }}
+                              className="w-16 p-1.5 bg-[#FAF8F5] border border-[#E2E8E5] rounded-lg text-xs font-bold text-center text-[#013E37] focus:outline-none focus:border-[#267D71]"
+                            />
+                          ) : (
+                            <input
+                              type="checkbox"
+                              checked={Boolean(currentVal)}
+                              onChange={(e) => {
+                                setEditingPlan({
+                                  ...editingPlan,
+                                  featureFlags: {
+                                    ...editingPlan.featureFlags,
+                                    [feat.key]: e.target.checked
+                                  }
+                                });
+                              }}
+                              className="w-5 h-5 accent-[#267D71] cursor-pointer"
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* DANH SÁCH QUYỀN LỢI HIỂN THỊ MARKETING */}
+                <div>
+                  <label className="block text-xs font-bold text-[#0D2B26] mb-1">
+                    Quyền Lợi Hiển Thị Marketing (Mỗi dòng 1 gạch đầu dòng):
+                  </label>
+                  <textarea
+                    rows={5}
+                    value={editingPlan.features.join('\n')}
+                    onChange={(e) => setEditingPlan({ ...editingPlan, features: e.target.value.split('\n').filter(s => s.trim()) })}
+                    className="w-full p-3 bg-white border border-[#E2E8E5] rounded-xl text-xs leading-relaxed focus:outline-none focus:border-[#267D71]"
+                  />
+                </div>
+
+                {planFormStatus && (
+                  <div className={`p-3 rounded-xl text-xs font-semibold ${planFormStatus.includes('thành công') ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                    {planFormStatus}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#E2E8E5]">
+                  <button
+                    type="button"
+                    onClick={() => setIsPlanModalOpen(false)}
+                    className="px-5 py-3 rounded-xl border border-[#E2E8E5] text-xs font-bold text-[#5F736E] hover:bg-[#EEF5F3] cursor-pointer"
+                  >
+                    Hủy Bỏ
+                  </button>
+
+                  <button
+                    type="submit"
+                    className="px-6 py-3 rounded-xl btn-primary text-xs font-bold flex items-center gap-2 shadow-md cursor-pointer"
+                  >
+                    <Save size={15} />
+                    <span>Lưu Cấu Hình Gói</span>
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
 

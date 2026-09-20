@@ -7,10 +7,12 @@ import { CustomersModule } from '../customers/customers.module';
 import { FirebaseModule } from '../firebase/firebase.module';
 import { ConfigModule } from '@nestjs/config';
 
+import { SePayService } from './sepay.service';
+
 @Module({
   imports: [CustomersModule, FirebaseModule, ConfigModule],
   controllers: [PaymentController],
-  providers: [PaymentService, VietQRService, EmailService],
-  exports: [PaymentService, VietQRService, EmailService],
+  providers: [PaymentService, VietQRService, EmailService, SePayService],
+  exports: [PaymentService, VietQRService, EmailService, SePayService],
 })
 export class PaymentModule {}

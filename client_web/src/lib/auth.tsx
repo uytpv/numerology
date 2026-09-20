@@ -8,7 +8,7 @@ import {
   GoogleAuthProvider, 
   signOut
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
 interface AuthContextType {
@@ -26,6 +26,8 @@ const ADMIN_EMAILS = [
   'uytpv@gmail.com',
   'admin@numerology.vn',
   'admin@lifemaps.vn',
+  'traphucvinhuy012022@gmail.com',
+  'admin@lifemap.vn'
 ];
 
 const AuthContext = createContext<AuthContextType>({
@@ -64,7 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               displayName: currentUser.displayName,
               photoURL: currentUser.photoURL,
               role: initialRole,
-              credits: isHardcodedAdmin ? 9999 : 0,
+              credits: 0, // Bắt đầu từ 0 lượt, nạp bao nhiêu dùng bấy nhiêu
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
             });
@@ -74,9 +76,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const data = userDocSnap.data();
             const hasAdminRole = data?.role === 'admin' || isHardcodedAdmin;
             
-            // Tự động nâng cấp quyền Admin trong Firestore nếu là admin email
+            // Tự động nâng cấp quyền Admin trong Firestore nếu là admin email (KHÔNG ghi đè credits)
             if (isHardcodedAdmin && data?.role !== 'admin') {
-              await setDoc(userDocRef, { role: 'admin', credits: 9999 }, { merge: true });
+              await setDoc(userDocRef, { role: 'admin' }, { merge: true });
+            }
+
+            // Tự sửa lỗi: Nếu tài khoản từng bị gán nhầm 9999 credits, tự động tính lại credits theo đúng số giao dịch đã thanh toán (PAID)
+            if (data?.credits === 9999) {
+              try {
+                const qPaid = query(
+                  collection(db, 'orders'),
+                  where('userId', '==', currentUser.uid),
+                  where('status', '==', 'PAID')
+                );
+                const paidSnap = await getDocs(qPaid);
+                let realCredits = 0;
+                paidSnap.forEach(d => {
+                  realCredits += (d.data().creditsGranted || 1);
+                });
+                await setDoc(userDocRef, { credits: realCredits }, { merge: true });
+              } catch (recErr) {
+                console.warn('Không thể tự động khôi phục credits:', recErr);
+              }
             }
 
             setIsAdmin(hasAdminRole);

@@ -12,6 +12,7 @@ import { SupportChatPopup } from './SupportChatPopup';
 import { IndicatorKnowledgeCard } from './IndicatorKnowledgeCard';
 import { PersonalCalendarModal } from './PersonalCalendarModal';
 import { AdaptiveProfileModal } from './AdaptiveProfileModal';
+import { CheckoutModal } from './CheckoutModal';
 import { 
   ReadingProfileId, 
   READING_PROFILES, 
@@ -20,7 +21,7 @@ import {
 import { 
   Sparkles, Printer, UserCheck, Lock, Unlock, Headphones, 
   Compass, ShieldAlert, Award, ArrowRight, Check, AlertCircle, 
-  FileText, UserPlus, HelpCircle, LayoutGrid, Zap, Calendar, ArrowLeftRight, SlidersHorizontal
+  FileText, UserPlus, HelpCircle, LayoutGrid, Zap, Calendar, ArrowLeftRight, SlidersHorizontal, Plus
 } from 'lucide-react';
 
 export interface ReportDashboardProps {
@@ -41,6 +42,23 @@ export function ReportDashboard({ customer, initialCustomer, isExistingRecord, o
   const [isFocusModalOpen, setIsFocusModalOpen] = useState(false);
   const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
   const [isAdaptiveModalOpen, setIsAdaptiveModalOpen] = useState(false);
+
+  // In-app Direct Checkout & Topic Expansion Addon states
+  const [isDirectCheckoutOpen, setIsDirectCheckoutOpen] = useState(false);
+  const [directCheckoutPlan, setDirectCheckoutPlan] = useState<{ id: string; name: string; amount: number; features?: string[] }>({
+    id: 'b2c_single_discovery',
+    name: 'Gói Cá Nhân Khám Phá',
+    amount: 39000,
+  });
+  const [isTopicExpansionModalOpen, setIsTopicExpansionModalOpen] = useState(false);
+  const [tempAddonTopics, setTempAddonTopics] = useState<string[]>([]);
+  const [isLocal, setIsLocal] = useState(false);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsLocal(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    }
+  }, []);
 
   // Khởi tạo phong cách đọc tối ưu theo AI recommendation từ bộ số
   const [readingProfile, setReadingProfile] = useState<ReadingProfileId>(() => {
@@ -66,15 +84,42 @@ export function ReportDashboard({ customer, initialCustomer, isExistingRecord, o
   const fullName = formatTitleCase(rawFullName);
   
   // Is paid status
-  const [isPaid, setIsPaid] = useState<boolean>(
-    Boolean(currentCustomer?.tier === 'paid' || currentCustomer?.tier === 'coach' || currentCustomer?.is_paid)
-  );
-
-  // Credits count for user (e.g. from user profile or mock credits for coach/family packages)
-  const [userCredits, setUserCredits] = useState<number>(() => {
-    if ((user as any)?.credits !== undefined) return (user as any).credits;
-    return 10;
+  const [isPaid, setIsPaid] = useState<boolean>(() => {
+    return Boolean(
+      currentCustomer?.is_paid === true || 
+      currentCustomer?.tier === 'paid' || 
+      currentCustomer?.tier === 'coach' ||
+      (typeof currentCustomer?.unlockedTier === 'number' && currentCustomer.unlockedTier >= 3)
+    );
   });
+
+  // Credits count for user: Mặc định là 0 cho khách chưa đăng nhập / chưa nạp credit
+  const [userCredits, setUserCredits] = useState<number>(() => {
+    if (user && typeof (user as any)?.credits === 'number') {
+      return (user as any).credits;
+    }
+    return 0;
+  });
+
+  // Đồng bộ lại khi user đăng nhập hoặc đổi tài khoản
+  React.useEffect(() => {
+    if (user && typeof (user as any)?.credits === 'number') {
+      setUserCredits((user as any).credits);
+    } else if (!user) {
+      setUserCredits(0);
+    }
+  }, [user]);
+
+  // Đồng bộ lại khi dữ liệu customer thay đổi
+  React.useEffect(() => {
+    const paid = Boolean(
+      currentCustomer?.is_paid === true || 
+      currentCustomer?.tier === 'paid' || 
+      currentCustomer?.tier === 'coach' ||
+      (typeof currentCustomer?.unlockedTier === 'number' && currentCustomer.unlockedTier >= 3)
+    );
+    setIsPaid(paid);
+  }, [currentCustomer]);
 
   const { layer1, layer2, layer3 } = generate3LayerNumerologyData({
     ...currentCustomer,
@@ -259,16 +304,23 @@ export function ReportDashboard({ customer, initialCustomer, isExistingRecord, o
                 </p>
               </div>
 
-              {/* TAB 1 PDF EXPORT BUTTON */}
-              <a
-                href={`/report/print?id=${currentCustomer?.id || 'demo'}&scope=tab1`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="shrink-0 px-4 py-2.5 rounded-xl btn-primary text-xs font-bold flex items-center gap-2 shadow-sm self-start sm:self-auto"
-              >
-                <Printer size={15} />
-                <span>Xuất PDF Tam Giác Vàng</span>
-              </a>
+              {/* TAB 1 CTA DẪN ĐĂNG NHẬP / XEM 21 CHỈ SỐ */}
+              {!user ? (
+                <button
+                  onClick={loginWithGoogle}
+                  className="shrink-0 px-4 py-2.5 rounded-xl bg-[#013E37] hover:bg-[#0D2B26] text-[#FFEFB3] text-xs font-extrabold flex items-center gap-2 shadow-md transition-all self-start sm:self-auto border border-[#267D71]/40 hover:scale-[1.02]"
+                >
+                  <Sparkles size={15} className="text-[#FFEFB3]" />
+                  <span>Đăng Nhập Nhận 21 Chỉ Số (Miễn Phí) ➔</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => setActiveTab('lifemap')}
+                  className="shrink-0 px-4 py-2.5 rounded-xl btn-primary text-xs font-bold flex items-center gap-2 shadow-sm self-start sm:self-auto"
+                >
+                  <span>Xem Trọn Bộ 21 Chỉ Số ➔</span>
+                </button>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -283,7 +335,7 @@ export function ReportDashboard({ customer, initialCustomer, isExistingRecord, o
                       </span>
                       {layer1.life_path.breakdown && (
                         <span className="text-xs font-bold text-[#267D71]">
-                          ({layer1.life_path.breakdown})
+                          {layer1.life_path.breakdown}
                         </span>
                       )}
                     </div>
@@ -311,7 +363,7 @@ export function ReportDashboard({ customer, initialCustomer, isExistingRecord, o
                       </span>
                       {layer1.expression.breakdown && (
                         <span className="text-xs font-bold text-[#267D71]">
-                          ({layer1.expression.breakdown})
+                          {layer1.expression.breakdown}
                         </span>
                       )}
                     </div>
@@ -339,7 +391,7 @@ export function ReportDashboard({ customer, initialCustomer, isExistingRecord, o
                       </span>
                       {layer1.heart_desire.breakdown && (
                         <span className="text-xs font-bold text-[#8C6A81]">
-                          ({layer1.heart_desire.breakdown})
+                          {layer1.heart_desire.breakdown}
                         </span>
                       )}
                     </div>
@@ -361,22 +413,37 @@ export function ReportDashboard({ customer, initialCustomer, isExistingRecord, o
             <div className="mt-8 p-6 rounded-3xl bg-[#FAF8F5] border border-[#E2E8E5] flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-[#FFEFB3] text-[#013E37] flex items-center justify-center text-xl">
-                  🔓
+                  {!user ? '🎁' : '🔓'}
                 </div>
                 <div>
                   <div className="text-sm font-bold text-[#0D2B26] font-heading">
                     Khám Phá Trọn Bộ Life Map {layer2.indicatorsGrid.length} Chỉ Số Của Bạn
                   </div>
                   <div className="text-xs text-[#5F736E]">
-                    Chuyển sang Tab "Life Map {layer2.indicatorsGrid.length} chỉ số" để xem bản đồ năng lượng chi tiết nhất.
+                    {!user 
+                      ? 'Đăng nhập Google miễn phí ngay để nhận toàn bộ 21 chỉ số, ma trận năng lượng và 4 đỉnh cao Kim Tự Tháp.'
+                      : 'Chuyển sang Tab "Life Map 21 chỉ số" để xem bản đồ năng lượng chi tiết nhất.'}
                   </div>
                 </div>
               </div>
               <button
-                onClick={() => setActiveTab('lifemap')}
-                className="px-5 py-2.5 rounded-xl btn-primary text-xs whitespace-nowrap shadow-sm font-bold"
+                onClick={() => {
+                  if (!user) {
+                    loginWithGoogle();
+                  } else {
+                    setActiveTab('lifemap');
+                  }
+                }}
+                className="px-5 py-2.5 rounded-xl btn-primary text-xs whitespace-nowrap shadow-sm font-bold flex items-center gap-2"
               >
-                Khám Phá {layer2.indicatorsGrid.length} Chỉ Số ➔
+                {!user ? (
+                  <>
+                    <Sparkles size={14} />
+                    <span>Đăng Nhập Nhận 21 Chỉ Số ➔</span>
+                  </>
+                ) : (
+                  <span>Khám Phá {layer2.indicatorsGrid.length} Chỉ Số ➔</span>
+                )}
               </button>
             </div>
           </div>
@@ -423,7 +490,7 @@ export function ReportDashboard({ customer, initialCustomer, isExistingRecord, o
                 </div>
 
                 <a
-                  href={`/report/print?id=${currentCustomer?.id || 'demo'}&scope=tab2`}
+                  href={`/report/print?id=${currentCustomer?.id || 'local_guest'}&scope=tab2&name=${encodeURIComponent(fullName)}&dob=${encodeURIComponent(currentCustomer?.dob || '')}&gender=${encodeURIComponent(currentCustomer?.gender || 'male')}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="shrink-0 px-4 py-2.5 rounded-xl btn-primary text-xs font-bold flex items-center gap-2 shadow-sm"
@@ -761,7 +828,7 @@ export function ReportDashboard({ customer, initialCustomer, isExistingRecord, o
                   Luận Giải Đa Chiều Độc Bản Dành Cho {fullName}
                 </h2>
                 <p className="text-[#5F736E] text-sm sm:text-base leading-relaxed">
-                  Bản luận giải AI độc bản không dùng các đoạn văn mẫu cố định mà phân tích tổng hòa giữa <strong className="text-[#013E37]">toàn bộ {layer2.indicatorsGrid.length} chỉ số</strong>, yếu tố <strong className="text-[#267D71]">Giới tính ({layer3.genderAgeAnalysis.gender})</strong>, <strong className="text-[#8C6A81]">{layer3.genderAgeAnalysis.ageGroupText}</strong> và chu kỳ Năm Thế Giới {layer3.worldCycleAnalysis.worldYearNumber}.
+                  Bản luận giải độc bản không dùng các đoạn văn mẫu cố định mà phân tích tổng hòa giữa <strong className="text-[#013E37]">toàn bộ {layer2.indicatorsGrid.length} chỉ số</strong>, yếu tố <strong className="text-[#267D71]">Giới tính ({layer3.genderAgeAnalysis.gender})</strong>, <strong className="text-[#8C6A81]">{layer3.genderAgeAnalysis.ageGroupText}</strong> và chu kỳ Năm Thế Giới {layer3.worldCycleAnalysis.worldYearNumber}.
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left pt-2">
@@ -782,16 +849,60 @@ export function ReportDashboard({ customer, initialCustomer, isExistingRecord, o
                   </div>
                 </div>
 
-                <div className="pt-4">
+                <div className="pt-4 space-y-2">
                   <button
-                    onClick={() => setIsPaymentModalOpen(true)}
-                    className="px-8 py-4 rounded-2xl btn-primary text-base font-bold shadow-lg transition-all inline-flex items-center gap-3"
+                    onClick={() => {
+                      setDirectCheckoutPlan({
+                        id: 'b2c_single_discovery',
+                        name: 'Gói Cá Nhân Khám Phá',
+                        amount: 39000,
+                        features: [
+                          'Mở khóa trọn vẹn 3 Tầng Luận Giải Độc Bản',
+                          'Đầy đủ 21 chỉ số Pythagoras & Sơ đồ Kim Tự Tháp',
+                          'Kèm 3 Trọng tâm cuộc sống ưu tiên ban đầu',
+                          'Lưu trữ hồ sơ vĩnh viễn, xem lại MIỄN PHÍ TRỌN ĐỜI',
+                          'Xuất bản Ebook PDF 30+ trang chuẩn in ấn cao cấp'
+                        ]
+                      });
+                      setIsDirectCheckoutOpen(true);
+                    }}
+                    className="px-8 py-4 rounded-2xl btn-primary text-base font-bold shadow-lg transition-all inline-flex items-center gap-3 cursor-pointer"
                   >
-                    <span>🚀 Mở Khóa Luận Giải Đa Chiều - 200.000 đ</span>
+                    <span>🚀 Mở Khóa Luận Giải Đa Chiều - 39.000 đ (~1.5€)</span>
                   </button>
-                  <div className="text-xs text-[#93A39F] mt-2.5">
-                    Thanh toán 1 lần duy nhất • Mở khóa vĩnh viễn • Xuất Ebook PDF 30+ trang
+                  <div className="text-xs text-[#5F736E] flex flex-col sm:flex-row items-center justify-center gap-2 pt-1">
+                    <span>Thanh toán 1 lần duy nhất • Mở khóa vĩnh viễn • Xuất Ebook PDF</span>
+                    <span className="hidden sm:inline">•</span>
+                    <button
+                      onClick={() => setIsPaymentModalOpen(true)}
+                      className="text-[#267D71] font-bold hover:underline cursor-pointer"
+                    >
+                      Hoặc xem Gói Gia Đình & Chuyên Gia
+                    </button>
                   </div>
+                  {isLocal && (
+                    <div className="pt-2">
+                      <button
+                        onClick={() => {
+                          setDirectCheckoutPlan({
+                            id: 'test_plan_2k',
+                            name: 'Gói Test Sandbox (2.000đ)',
+                            amount: 2000,
+                            features: [
+                              'Quét mã QR app ngân hàng thật (ACB)',
+                              'Số tiền chuyển khoản siêu nhỏ: 2.000 VNĐ',
+                              'Tự động kích hoạt mở khóa toàn bộ báo cáo Tầng 3',
+                              'Kiểm thử Webhook SePay bắt biến động số dư thực'
+                            ]
+                          });
+                          setIsDirectCheckoutOpen(true);
+                        }}
+                        className="px-6 py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs shadow-md transition-all inline-flex items-center gap-2 cursor-pointer border border-amber-400"
+                      >
+                        <span>🧪 Quét QR Test Thật 2.000đ (Chỉ Hiện Trên Localhost)</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -813,7 +924,7 @@ export function ReportDashboard({ customer, initialCustomer, isExistingRecord, o
                 </div>
                 <div className="h-px bg-[#267D71]/20 my-1" />
                 <div>
-                  Bạn có muốn dùng <strong>1 lượt</strong> để mở khóa bản Luận Giải Đa Chiều AI chuyên sâu (5 Chương chuẩn Life Coach ICF) cho <strong className="text-[#0D2B26]">{fullName}</strong> ({currentCustomer?.dob}) không?
+                  Bạn có muốn dùng <strong>1 lượt</strong> để mở khóa bản Luận Giải Đa Chiều độc bản chuyên sâu (5 Chương chuẩn Life Coach ICF) cho <strong className="text-[#0D2B26]">{fullName}</strong> ({currentCustomer?.dob}) không?
                 </div>
               </div>
 
@@ -893,7 +1004,7 @@ export function ReportDashboard({ customer, initialCustomer, isExistingRecord, o
                     <span>🎯 Đổi Trọng Tâm ({selectedFocusTopics.length}/3)</span>
                   </button>
                   <a
-                    href={`/report/print?id=${currentCustomer?.id || 'demo'}&scope=tab3&profile=${readingProfile}`}
+                    href={`/report/print?id=${currentCustomer?.id || 'local_guest'}&scope=tab3&profile=${readingProfile}&name=${encodeURIComponent(fullName)}&dob=${encodeURIComponent(currentCustomer?.dob || '')}&gender=${encodeURIComponent(currentCustomer?.gender || 'male')}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-5 py-2.5 rounded-xl bg-[#FFEFB3] hover:bg-[#F9E79F] text-[#013E37] text-xs font-extrabold flex items-center gap-2 shadow-md transition-all"
@@ -1586,6 +1697,33 @@ export function ReportDashboard({ customer, initialCustomer, isExistingRecord, o
                       </div>
                     ))}
                   </div>
+
+                  {/* KHỐI CTA MỞ RỘNG THÊM VẤN ĐỀ QUAN TÂM (+15.000Đ/CHỦ ĐỀ) */}
+                  <div className="p-6 rounded-3xl bg-gradient-to-r from-[#EEF5F3] to-[#FAF8F5] border-2 border-dashed border-[#267D71]/40 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+                    <div className="space-y-1 text-center sm:text-left">
+                      <div className="flex items-center justify-center sm:justify-start gap-2 text-xs font-bold uppercase tracking-wider text-[#267D71]">
+                        <Sparkles size={16} />
+                        <span>Bạn muốn khám phá thêm các khía cạnh khác của cuộc sống?</span>
+                      </div>
+                      <h4 className="text-base sm:text-lg font-bold text-[#0D2B26] font-heading">
+                        Mở Rộng Thêm Vấn Đề Quan Tâm (+15.000 đ / Chủ Đề)
+                      </h4>
+                      <p className="text-xs text-[#5F736E]">
+                        Bổ sung thêm các chương luận giải chuyên sâu (Sức khỏe, Nhà đất, Con cái, Vận hạn, Xuất ngoại...) nối tiếp trực tiếp vào báo cáo của bạn.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTempAddonTopics([]);
+                        setIsTopicExpansionModalOpen(true);
+                      }}
+                      className="px-6 py-3.5 rounded-2xl btn-primary text-xs font-bold flex items-center gap-2 shadow-md cursor-pointer shrink-0 transition-all"
+                    >
+                      <Plus size={16} />
+                      <span>➕ Mở Rộng Thêm Chủ Đề</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* KẾ HOẠCH ƯU TIÊN CHUYỂN HÓA (PRIORITY ACTION TABLE) */}
@@ -1836,6 +1974,177 @@ export function ReportDashboard({ customer, initialCustomer, isExistingRecord, o
         personality={currentCustomer?.map?.personality || 8}
         rationalThought={currentCustomer?.map?.rational_thought || 1}
       />
+
+      {/* TOPIC EXPANSION MODAL (MỞ RỘNG THÊM VẤN ĐỀ QUAN TÂM +15.000Đ/CHỦ ĐỀ) */}
+      {isTopicExpansionModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0D2B26]/60 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-[#FFFFFF] border border-[#E2E8E5] rounded-3xl max-w-2xl w-full p-6 sm:p-8 relative shadow-2xl my-8 space-y-6">
+            <div className="flex items-center justify-between border-b border-[#E2E8E5] pb-4">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">✨</span>
+                <div>
+                  <h3 className="text-lg sm:text-xl font-bold font-heading text-[#0D2B26]">
+                    Mở Rộng Thêm Vấn Đề Quan Tâm
+                  </h3>
+                  <p className="text-xs text-[#5F736E]">Phí vi mô: 15.000 đ / mỗi chủ đề bổ sung</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsTopicExpansionModalOpen(false)}
+                className="p-2 text-[#5F736E] hover:text-[#0D2B26] rounded-full transition-all cursor-pointer text-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs sm:text-sm text-[#5F736E] leading-relaxed">
+              Chọn thêm các chủ đề mới để hệ thống bổ sung các chương luận giải chuyên sâu và checklist hành động nối tiếp vào hồ sơ của <strong>{fullName}</strong>:
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto pr-1">
+              {[
+                { id: 'money', title: 'Tiền Bạc & Tài Chính', icon: '💰', desc: 'Dòng tiền, tích lũy, đầu tư' },
+                { id: 'love', title: 'Tình Yêu & Hôn Nhân', icon: '❤️', desc: 'Hòa hợp, thấu cảm, gắn kết' },
+                { id: 'career', title: 'Công Việc & Thăng Tiến', icon: '💼', desc: 'Sở trường, lãnh đạo, bứt phá' },
+                { id: 'family', title: 'Gia Đình & Con Cái', icon: '🏡', desc: 'Nuôi dạy con, gắn kết mái ấm' },
+                { id: 'health', title: 'Sức Khỏe & Thân - Tâm', icon: '🌿', desc: 'Cân bằng, giải tỏa áp lực' },
+                { id: 'destiny', title: 'Vận Hạn & Đón Đầu Cơ Hội', icon: '🔮', desc: 'Thiên thời, phòng ngừa rủi ro' },
+                { id: 'property', title: 'Nhà Cửa & Bất Động Sản', icon: '🏛️', desc: 'An cư, gia tăng tài sản' },
+                { id: 'learning', title: 'Học Hành & Phát Triển', icon: '📚', desc: 'Nâng cao chuyên môn, tự học' },
+                { id: 'overseas', title: 'Xuất Ngoại & Định Cư', icon: '✈️', desc: 'Mở rộng quốc tế, đi xa' },
+                { id: 'legacy', title: 'Hậu Vận & An Yên Tuổi Già', icon: '🌅', desc: 'Di sản, phước đức, an nhiên' },
+              ].map((item) => {
+                const isAlreadyInReport = selectedFocusTopics.includes(item.id);
+                const isTempSelected = tempAddonTopics.includes(item.id);
+
+                if (isAlreadyInReport) {
+                  return (
+                    <div
+                      key={item.id}
+                      className="p-3.5 rounded-2xl border border-emerald-200 bg-emerald-50/70 text-left flex items-start gap-3 opacity-90"
+                    >
+                      <span className="text-2xl shrink-0 mt-0.5">{item.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-xs sm:text-sm text-emerald-950 font-heading">{item.title}</span>
+                          <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md">
+                            ✓ Đang có trong bài
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-emerald-800 mt-0.5">{item.desc}</p>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      if (isTempSelected) {
+                        setTempAddonTopics(tempAddonTopics.filter(id => id !== item.id));
+                      } else {
+                        setTempAddonTopics([...tempAddonTopics, item.id]);
+                      }
+                    }}
+                    className={`p-3.5 rounded-2xl border text-left flex items-start gap-3 transition-all cursor-pointer ${
+                      isTempSelected
+                        ? 'bg-[#EEF5F3] border-[#267D71] shadow-sm ring-1 ring-[#267D71]'
+                        : 'bg-[#FAF8F5] border-[#E2E8E5] hover:border-[#267D71]/40'
+                    }`}
+                  >
+                    <span className="text-2xl shrink-0 mt-0.5">{item.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs sm:text-sm text-[#0D2B26] font-heading">{item.title}</span>
+                        <span className={`text-xs font-bold ${isTempSelected ? 'text-[#267D71]' : 'text-[#5F736E]'}`}>
+                          {isTempSelected ? '✓ Đã chọn (+15k)' : '+ Thêm'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#5F736E] mt-0.5">{item.desc}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* TOTAL CALCULATION & ACTION */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-[#E2E8E5]">
+              <div>
+                <div className="text-xs text-[#5F736E]">
+                  Đang có: <strong className="text-[#013E37]">{selectedFocusTopics.length}</strong> • Chọn thêm:{' '}
+                  <strong className="text-[#267D71] font-bold">+{tempAddonTopics.length} chủ đề</strong>
+                </div>
+                <div className="text-sm font-extrabold text-[#013E37]">
+                  Tổng phụ phí:{' '}
+                  <span className="text-base text-[#267D71]">
+                    {(tempAddonTopics.length * 15000).toLocaleString('vi-VN')} đ
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                disabled={tempAddonTopics.length === 0}
+                onClick={() => {
+                  setDirectCheckoutPlan({
+                    id: 'b2c_topic_addon_15k',
+                    name: `Mở Rộng ${tempAddonTopics.length} Trọng Tâm Cuộc Sống`,
+                    amount: tempAddonTopics.length * 15000,
+                    features: [
+                      `Bổ sung thêm ${tempAddonTopics.length} góc nhìn luận giải chuyên sâu`,
+                      'Nối tiếp trực tiếp vào bài báo cáo hiện có',
+                      'Cập nhật Ebook PDF trọn vẹn phiên bản mới nhất'
+                    ]
+                  });
+                  setIsTopicExpansionModalOpen(false);
+                  setIsDirectCheckoutOpen(true);
+                }}
+                className={`w-full sm:w-auto px-6 py-3.5 rounded-2xl font-bold text-xs shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                  tempAddonTopics.length > 0
+                    ? 'btn-primary'
+                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                <span>🚀 Mở Khóa {tempAddonTopics.length > 0 ? `(${ (tempAddonTopics.length * 15000).toLocaleString('vi-VN') } đ)` : ''}</span>
+                <ArrowRight size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DIRECT CHECKOUT MODAL CHO GÓI 39K VÀ ADDON 15K */}
+      {isDirectCheckoutOpen && (
+        <CheckoutModal
+          isOpen={isDirectCheckoutOpen}
+          onClose={() => setIsDirectCheckoutOpen(false)}
+          planId={directCheckoutPlan.id}
+          planName={directCheckoutPlan.name}
+          amount={directCheckoutPlan.amount}
+          features={directCheckoutPlan.features}
+          customerId={currentCustomer?.id}
+          userId={user?.uid}
+          userEmail={user?.email || ''}
+          userName={user?.displayName || 'Khách hàng'}
+          onSuccess={() => {
+            setIsDirectCheckoutOpen(false);
+            if (directCheckoutPlan.id === 'b2c_single_discovery' || directCheckoutPlan.id === 'test_plan_2k') {
+              setIsPaid(true);
+              setIsFocusModalOpen(true);
+            } else if (directCheckoutPlan.id === 'b2c_topic_addon_15k') {
+              const updatedTopics = Array.from(new Set([...selectedFocusTopics, ...tempAddonTopics]));
+              setSelectedFocusTopics(updatedTopics);
+              if (currentCustomer) {
+                currentCustomer.life_focus = updatedTopics;
+                localStorage.setItem('lifemaps_current_report', JSON.stringify(currentCustomer));
+              }
+            }
+            if (onRefresh) onRefresh();
+          }}
+        />
+      )}
     </div>
   );
 }

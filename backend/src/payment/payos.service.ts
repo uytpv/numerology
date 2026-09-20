@@ -1,4 +1,4 @@
-﻿import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 
@@ -62,7 +62,7 @@ export class PayOSService {
     this.logger.log(`[PayOS VietQR Sandbox] Tạo mã VietQR cho Order #${data.orderCode} - Số tiền: ${data.amount} VND`);
     const mockAccountNumber = '102870192838';
     const mockBankName = 'MBBank';
-    const mockAccountName = 'CONG TY NUMEROLOGY AI';
+    const mockAccountName = 'CONG TY LIFE MAPS';
     const memo = `NUMERO${data.orderCode}`;
     const mockQrCode = `https://img.vietqr.io/image/${mockBankName}-${mockAccountNumber}-compact.png?amount=${data.amount}&addInfo=${memo}&accountName=${encodeURIComponent(mockAccountName)}`;
 

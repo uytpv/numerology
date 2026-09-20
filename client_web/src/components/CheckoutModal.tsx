@@ -1,12 +1,16 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
-import { db } from '@/lib/firebase';
 import { doc, onSnapshot, getDoc, updateDoc, setDoc } from 'firebase/firestore';
-import { X, QrCode, Copy, Check, Sparkles, ShieldCheck, AlertCircle, Loader2, ExternalLink, ArrowRight, Clock, HelpCircle, CheckCircle2 } from 'lucide-react';
+import { db } from '@/lib/firebase';
+import { 
+  X, QrCode, Copy, Check, Sparkles, ShieldCheck, AlertCircle, 
+  Loader2, ExternalLink, ArrowRight, Clock, HelpCircle, CheckCircle2,
+  MessageCircle, Phone
+} from 'lucide-react';
 import canvasConfetti from 'canvas-confetti';
 
 interface CheckoutModalProps {
@@ -20,6 +24,7 @@ interface CheckoutModalProps {
   userId?: string;
   userEmail?: string;
   userName?: string;
+  existingOrder?: any;
   onSuccess?: () => void;
 }
 
@@ -34,6 +39,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   userId: propUserId,
   userEmail: propUserEmail,
   userName: propUserName,
+  existingOrder,
   onSuccess,
 }) => {
   const router = useRouter();
@@ -43,6 +49,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSupportGuide, setShowSupportGuide] = useState(false);
+  const [supportCopied, setSupportCopied] = useState(false);
   const [countdown, setCountdown] = useState(600); // 10 phút
 
   const currentUserId = user?.uid || propUserId || 'guest_user';
@@ -50,13 +58,62 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const currentUserName = user?.displayName || propUserName || 'Khách hàng';
 
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+  const initiatingRef = useRef<string | null>(null);
 
-  // Khởi tạo mã thanh toán VietQR khi modal mở
+  // Khởi tạo mã thanh toán VietQR khi modal mở (chỉ gọi 1 lần duy nhất cho mỗi phiên)
   useEffect(() => {
-    if (!isOpen || !planId) return;
+    if (!isOpen) {
+      initiatingRef.current = null;
+      return;
+    }
+
+    if (!planId) return;
+
+    // 1. Nếu mở lại đơn hàng PENDING đã có sẵn, dùng trực tiếp thông tin đơn cũ không tạo mới
+    if (existingOrder?.orderCode) {
+      const memo = existingOrder.orderCode;
+      const orderAmount = existingOrder.amount || initialAmount || 200000;
+      const quickLink = `https://api.vietqr.io/image/970416-12688937-hjTz6tf.jpg?amount=${orderAmount}&addInfo=${memo}&accountName=${encodeURIComponent('TRA PHUC VINH UY')}`;
+      
+      setPaymentSuccess(false);
+      setError(null);
+      setShowSupportGuide(false);
+      setCountdown(600);
+      setOrderData({
+        orderCode: existingOrder.orderCode,
+        plan: {
+          id: existingOrder.planId || planId,
+          nameVi: existingOrder.planName || planName || 'Gói Dịch Vụ Life Maps',
+          priceVnd: orderAmount,
+          features: existingOrder.features || initialFeatures || [
+            'Mở khóa báo cáo chuyên sâu Tầng 3',
+            'Luận giải đầy đủ 17 chỉ số Pythagoras',
+            'Xuất bản file PDF 30+ trang chất lượng cao'
+          ]
+        },
+        vietqr: {
+          bin: '970416',
+          bankName: 'Ngân hàng TMCP Á Châu (ACB)',
+          accountNumber: '12688937',
+          accountName: 'TRA PHUC VINH UY',
+          amount: orderAmount,
+          description: memo,
+          orderCode: existingOrder.orderCode,
+          qrDataURL: quickLink,
+          quickLinkUrl: quickLink,
+        }
+      });
+      return;
+    }
+
+    // 2. Chống duplicate call do React StrictMode hoặc re-render
+    const sessionKey = `${planId}_${currentUserId}_${initialAmount}`;
+    if (initiatingRef.current === sessionKey) return;
+    initiatingRef.current = sessionKey;
 
     setPaymentSuccess(false);
     setError(null);
+    setShowSupportGuide(false);
     setOrderData(null);
     setCountdown(600);
 
@@ -111,16 +168,26 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     };
 
     initPayment();
-  }, [isOpen, planId, customerId, currentUserId, currentUserEmail, currentUserName, backendUrl, initialAmount, initialFeatures, planName]);
+  }, [isOpen, planId, customerId, currentUserId, currentUserEmail, currentUserName, backendUrl, initialAmount, initialFeatures, planName, existingOrder]);
 
-  // Bộ đếm ngược thời gian thanh toán
+  // Bộ đếm ngược thời gian thanh toán (10 phút)
   useEffect(() => {
-    if (!isOpen || paymentSuccess || countdown <= 0) return;
+    if (!isOpen || paymentSuccess) return;
+    if (countdown <= 0) {
+      setShowSupportGuide(true);
+      if (orderData?.orderCode) {
+        updateDoc(doc(db, 'orders', orderData.orderCode.toString()), {
+          status: 'EXPIRED',
+          updatedAt: new Date().toISOString(),
+        }).catch(() => {});
+      }
+      return;
+    }
     const timer = setInterval(() => {
       setCountdown((prev) => prev - 1);
     }, 1000);
     return () => clearInterval(timer);
-  }, [isOpen, paymentSuccess, countdown]);
+  }, [isOpen, paymentSuccess, countdown, orderData?.orderCode]);
 
   // Realtime Polling kiểm tra trạng thái đơn hàng mỗi 3 giây
   useEffect(() => {
@@ -180,50 +247,47 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  // Xác nhận hoặc Giả lập thanh toán nhanh cho Dev / Sandbox
-  const handleConfirmOrDevMockPay = async () => {
+  // Sao chép thông tin đối soát để gửi CSKH
+  const handleCopySupportInfo = () => {
+    const text = `Hỗ trợ kích hoạt đơn hàng Life Maps:\n- Mã đơn hàng: #${orderData?.orderCode}\n- Gói dịch vụ: ${orderData?.plan?.nameVi || planName || 'Gói Dịch Vụ'}\n- Số tiền: ${(orderData?.vietqr?.amount || initialAmount || 200000).toLocaleString('vi-VN')} đ\n- Tài khoản: ${currentUserEmail || currentUserName}\n(Tôi đã chuyển khoản thành công, gửi kèm ảnh chụp biên lai nhờ admin đối soát kích hoạt giúp)`;
+    navigator.clipboard.writeText(text);
+    setSupportCopied(true);
+    setTimeout(() => setSupportCopied(false), 2500);
+  };
+
+  // Kiểm tra trạng thái thanh toán từ Ngân hàng / Backend (An toàn, không cấp quyền ảo)
+  const handleCheckPaymentStatus = async () => {
     if (!orderData?.orderCode) return;
     try {
       setLoading(true);
-      // Gọi backend dev-mock-pay
-      await axios.post(`${backendUrl}/api/v1/payments/dev-mock-pay`, {
-        orderCode: orderData.orderCode,
-      });
-      triggerSuccess();
-    } catch (err) {
-      console.warn('Lỗi gọi API giả lập qua backend, xử lý cập nhật Firestore trực tiếp:', err);
-      try {
-        // Fallback cập nhật Firestore
-        const orderRef = doc(db, 'orders', orderData.orderCode.toString());
-        await setDoc(orderRef, {
-          orderCode: orderData.orderCode,
-          planId: orderData.plan?.id || planId,
-          planName: orderData.plan?.nameVi || planName || 'Gói Dịch Vụ',
-          amount: orderData.vietqr?.amount || initialAmount || 200000,
-          userId: currentUserId,
-          userEmail: currentUserEmail,
-          status: 'PAID',
-          completedAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }, { merge: true });
+      setError(null);
 
-        // Cập nhật credits cho user nếu có
-        if (currentUserId && currentUserId !== 'guest_user') {
-          const userRef = doc(db, 'users', currentUserId);
-          const userSnap = await getDoc(userRef);
-          const currentCredits = userSnap.exists() ? (userSnap.data()?.credits || 0) : 0;
-          const addedCredits = orderData.plan?.credits || 1;
-          await setDoc(userRef, {
-            credits: currentCredits + addedCredits,
-            updatedAt: new Date().toISOString(),
-          }, { merge: true });
-        }
-
+      // 1. Kiểm tra trạng thái trực tiếp từ Firestore doc 'orders'
+      const orderRef = doc(db, 'orders', orderData.orderCode.toString());
+      const orderSnap = await getDoc(orderRef);
+      if (orderSnap.exists() && orderSnap.data()?.status === 'PAID') {
         triggerSuccess();
-      } catch (fsErr) {
-        console.error('Lỗi khi kích hoạt đơn:', fsErr);
-        triggerSuccess(); // Vẫn cho kích hoạt giao diện
+        return;
       }
+
+      // 2. Gọi backend kiểm tra nếu Firestore chưa cập nhật
+      try {
+        const res = await axios.get(`${backendUrl}/api/v1/payments/order-status/${orderData.orderCode}`);
+        if (res.data?.status === 'PAID') {
+          triggerSuccess();
+          return;
+        }
+      } catch (apiErr) {
+        // bỏ qua lỗi backend
+      }
+
+      // 3. Nếu chưa ghi nhận PAID: hiển thị hướng dẫn CSKH gửi biên lai
+      setShowSupportGuide(true);
+      setError('Hệ thống chưa ghi nhận biến động số dư từ ngân hàng (thường mất 1 - 2 phút). Nếu bạn đã chuyển khoản thành công và bị trừ tiền, vui lòng gửi biên lai qua Zalo CSKH bên dưới để được mở khóa ngay!');
+    } catch (err: any) {
+      console.error('Lỗi kiểm tra thanh toán:', err);
+      setShowSupportGuide(true);
+      setError('Tạm thời chưa thể đối soát tự động với ngân hàng. Quý khách vui lòng gửi biên lai qua kênh CSKH bên dưới để được kích hoạt thủ công.');
     } finally {
       setLoading(false);
     }
@@ -371,13 +435,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 <Loader2 size={36} className="mx-auto text-[#267D71] animate-spin" />
                 <p className="text-sm text-[#5F736E]">Đang khởi tạo mã QR thanh toán VietQR...</p>
               </div>
-            ) : error ? (
+            ) : !orderData ? (
               <div className="p-5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-center text-xs space-y-3">
                 <AlertCircle size={24} className="mx-auto text-red-500" />
-                <p>{error}</p>
+                <p>{error || 'Không thể khởi tạo mã thanh toán. Vui lòng thử lại sau.'}</p>
                 <button
                   onClick={onClose}
-                  className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold"
+                  className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer"
                 >
                   Đóng lại
                 </button>
@@ -484,19 +548,86 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   </ul>
                 </div>
 
-                {/* NÚT XÁC NHẬN & GIẢ LẬP TEST */}
-                <div className="pt-2 flex flex-col gap-2">
+                {/* NÚT KIỂM TRA TRẠNG THÁI THANH TOÁN & HỖ TRỢ CSKH */}
+                <div className="pt-2 flex flex-col gap-3">
+                  {error && (
+                    <div className="p-3.5 rounded-2xl bg-[#FFF8E6] border border-[#F9E79F] text-[#8C6B1C] text-xs flex items-start gap-2.5">
+                      <AlertCircle size={16} className="shrink-0 mt-0.5 text-amber-600" />
+                      <p className="leading-relaxed">{error}</p>
+                    </div>
+                  )}
+
+                  {/* KHUNG HỖ TRỢ CSKH KÍCH HOẠT NHANH */}
+                  {showSupportGuide && (
+                    <div className="p-4 rounded-2xl bg-[#F0FDF4] border border-[#BBF7D0] text-[#0D2B26] space-y-3 animate-in fade-in duration-200">
+                      <div className="flex items-start gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-[#DCFCE7] text-[#16A34A] flex items-center justify-center shrink-0 mt-0.5">
+                          <MessageCircle size={18} />
+                        </div>
+                        <div className="space-y-0.5 text-left">
+                          <h4 className="font-bold text-xs sm:text-sm text-[#0D2B26]">
+                            Kênh Hỗ Trợ Kích Hoạt Thủ Công 24/7
+                          </h4>
+                          <p className="text-[11px] text-[#5F736E] leading-relaxed">
+                            Nếu tài khoản đã bị trừ tiền nhưng hệ thống chưa tự kích hoạt, bạn hãy yên tâm 100%! Chỉ cần gửi ảnh <strong>Biên lai chuyển tiền</strong> kèm mã đơn để được duyệt ngay:
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="p-2.5 rounded-xl bg-white border border-[#DCFCE7] flex items-center justify-between font-mono text-xs">
+                        <span className="text-[#5F736E]">Mã đơn: <strong className="text-[#013E37]">#{orderData?.orderCode}</strong></span>
+                        <span className="text-[#5F736E]">Số tiền: <strong className="text-[#013E37]">{(orderData?.vietqr?.amount || initialAmount || 200000).toLocaleString('vi-VN')} đ</strong></span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                        <a
+                          href={`https://zalo.me/0912345678`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="py-2.5 px-3 rounded-xl bg-[#0068FF] hover:bg-[#0058DD] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-xs"
+                        >
+                          <MessageCircle size={14} />
+                          <span>Gửi Biên Lai Qua Zalo</span>
+                          <ExternalLink size={12} />
+                        </a>
+
+                        <button
+                          type="button"
+                          onClick={handleCopySupportInfo}
+                          className="py-2.5 px-3 rounded-xl bg-white hover:bg-[#FAF8F5] text-[#0D2B26] border border-[#E2E8E5] text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                        >
+                          {supportCopied ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+                          <span>{supportCopied ? 'Đã sao chép nội dung!' : 'Sao Chép Thông Tin'}</span>
+                        </button>
+                      </div>
+
+                      <div className="text-[10px] text-center text-[#5F736E]">
+                        Hotline CSKH: <strong className="text-[#0D2B26]">0912.345.678</strong> (Phục vụ 8h00 - 22h00)
+                      </div>
+                    </div>
+                  )}
+
                   <button
-                    onClick={handleConfirmOrDevMockPay}
+                    onClick={handleCheckPaymentStatus}
                     disabled={loading}
                     className="w-full py-3.5 rounded-2xl btn-primary text-xs font-bold flex items-center justify-center gap-2 shadow-md cursor-pointer"
                   >
-                    <Sparkles size={15} />
-                    {loading ? 'Đang kích hoạt...' : '⚡ Tôi Đã Chuyển Khoản / Xác Nhận Kích Hoạt Tức Thì'}
+                    {loading ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+                    {loading ? 'Đang kết nối kiểm tra ngân hàng...' : '⚡ Tôi Đã Chuyển Khoản / Kiểm Tra Kích Hoạt'}
                   </button>
-                  <p className="text-[10px] text-center text-[#5F736E] leading-relaxed">
-                    * Hệ thống sẽ tự động bắt giao dịch và kích hoạt sau 3-5 giây kể từ khi nhận tiền.
-                  </p>
+
+                  <div className="flex items-center justify-between text-[11px] text-[#5F736E] px-1">
+                    <span>* Tự động duyệt qua SePay Webhook</span>
+                    {!showSupportGuide && (
+                      <button
+                        type="button"
+                        onClick={() => setShowSupportGuide(true)}
+                        className="text-[#267D71] hover:underline font-medium cursor-pointer"
+                      >
+                        Gặp sự cố chuyển tiền?
+                      </button>
+                    )}
+                  </div>
                 </div>
 
               </div>

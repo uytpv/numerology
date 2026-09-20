@@ -4,7 +4,7 @@
     "indexes": "firestore.indexes.json"
   },
   "hosting": {
-    "site": "lifemaps",
+    "site": "lifemapvn",
     "public": "client_web/out",
     "cleanUrls": true,
     "ignore": [
