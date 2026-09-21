@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/commo
 import { FirebaseService } from '../firebase/firebase.service';
 import { AIService } from '../ai/ai.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
-import { calculateNumerologyMap } from '../utils/numerology';
+import { calculateNumerologyMap, parseDob, total, totalIgnoreMaster } from '../utils/numerology';
 
 @Injectable()
 export class CustomersService {
@@ -69,8 +69,9 @@ export class CustomersService {
     }
 
     const data = doc.data() as any;
+    const customerUserId = data?.userId || data?.user_id;
     // Bảo vệ dữ liệu theo chuẩn UyFullStack: Chỉ chính chủ hoặc Admin được xem
-    if (!isAdmin && data && data.userId !== userId) {
+    if (!isAdmin && data && customerUserId && customerUserId !== userId) {
       throw new ForbiddenException('Bạn không có quyền truy cập thông tin khách hàng này');
     }
 
@@ -147,5 +148,67 @@ export class CustomersService {
     }
 
     return false;
+  }
+
+  /**
+   * Tính toán toàn bộ 21 chỉ số Pythagoras chuẩn hóa (Single Source of Truth)
+   * Nhận họ tên và ngày sinh, tính toán bản đồ, timeline 7 ngày và 4 đỉnh cao
+   */
+  calculateFullNumerologyProfile(fullNameInput: string, dobInput: string, genderInput?: string) {
+    const rawFullName = (fullNameInput || '').trim();
+    const cleanDob = (dobInput || '').replace(/-/g, '/');
+
+    // Tách first_name và last_name thông minh
+    const nameParts = rawFullName.split(/\s+/).filter(Boolean);
+    const firstName = nameParts.length > 0 ? nameParts[nameParts.length - 1] : '';
+    const lastName = nameParts.length > 1 ? nameParts.slice(0, nameParts.length - 1).join(' ') : '';
+
+    const map = calculateNumerologyMap({
+      first_name: firstName,
+      last_name: lastName,
+      dob: cleanDob,
+    });
+
+    // Tính timeline 7 ngày cá nhân (3 ngày trước, hôm nay, 3 ngày sau)
+    const { day, month } = parseDob(cleanDob);
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth() + 1;
+    const thisYearRed = total(currentYear);
+    const personalYear = totalIgnoreMaster(total(day) + total(month) + thisYearRed);
+    const personalMonth = totalIgnoreMaster(personalYear + currentMonth);
+
+    const days: any[] = [];
+    const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+
+    for (let offset = -3; offset <= 3; offset++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + offset);
+      const curDate = d.getDate();
+      const pDay = totalIgnoreMaster(personalMonth + curDate);
+      days.push({
+        dayOfWeek: dayNames[d.getDay()],
+        dateFormatted: `${d.getDate()}/${d.getMonth() + 1}`,
+        personalDay: pDay,
+        isToday: offset === 0,
+      });
+    }
+
+    return {
+      fullName: rawFullName,
+      firstName,
+      lastName,
+      dob: cleanDob,
+      gender: genderInput || 'other',
+      map,
+      timeline: {
+        currentYear,
+        personalYear,
+        currentMonth,
+        personalMonth,
+        days,
+      },
+      calculatedAt: new Date().toISOString(),
+    };
   }
 }

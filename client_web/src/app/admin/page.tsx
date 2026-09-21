@@ -136,13 +136,33 @@ export default function AdminDashboard() {
   const { user, isAdmin, loading, loginWithGoogle, logout, grantAdminAccess } = useAuth();
   const { t } = useTranslation();
 
-  const [activeSubTab, setActiveSubTab] = useState<'orders' | 'customers' | 'users' | 'packages' | 'indicators' | 'keywords'>('orders');
+  const [activeSubTab, setActiveSubTab] = useState<'orders' | 'payment_logs' | 'customers' | 'users' | 'packages' | 'indicators' | 'keywords'>('orders');
   
   // State Quản lý Đơn hàng & Giao dịch
   const [orders, setOrders] = useState<any[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [orderFilter, setOrderFilter] = useState<'all' | 'PAID' | 'PENDING' | 'CANCELLED'>('all');
   const [orderSearchQuery, setOrderSearchQuery] = useState('');
+
+  // State Quản lý Nhật Ký Kiểm Toán SePay Webhook
+  const [paymentLogs, setPaymentLogs] = useState<any[]>([]);
+  const [loadingPaymentLogs, setLoadingPaymentLogs] = useState(false);
+
+  // Tải danh sách nhật ký giao dịch SePay
+  const fetchPaymentLogs = async () => {
+    setLoadingPaymentLogs(true);
+    try {
+      const q = query(collection(db, 'payment_logs'));
+      const snapshot = await getDocs(q);
+      const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      list.sort((a: any, b: any) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+      setPaymentLogs(list);
+    } catch (err) {
+      console.error('Lỗi tải nhật ký SePay:', err);
+    } finally {
+      setLoadingPaymentLogs(false);
+    }
+  };
 
   // State Quản Lý Gói Dịch Vụ & Platform Builder
   const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>(DEFAULT_PRICING_PLANS);
@@ -866,6 +886,21 @@ export default function AdminDashboard() {
           </button>
 
           <button
+            onClick={() => {
+              setActiveSubTab('payment_logs');
+              fetchPaymentLogs();
+            }}
+            className={`py-3 px-5 rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${
+              activeSubTab === 'payment_logs'
+                ? 'bg-[#013E37] text-white shadow-md'
+                : 'text-[#5F736E] hover:text-[#013E37] hover:bg-[#EEF5F3]'
+            }`}
+          >
+            <ShieldCheck size={16} />
+            <span>Nhật Ký SePay Tra Soát ({paymentLogs.length})</span>
+          </button>
+
+          <button
             onClick={() => setActiveSubTab('customers')}
             className={`py-3 px-5 rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${
               activeSubTab === 'customers'
@@ -1071,6 +1106,106 @@ export default function AdminDashboard() {
                                 <Check size={13} /> Hoàn tất
                               </span>
                             )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* TAB PAYMENT LOGS: NHẬT KÝ KIỂM TOÁN SEPAY                                */}
+        {/* ========================================================================= */}
+        {activeSubTab === 'payment_logs' && (
+          <div className="card-surface rounded-3xl p-6 sm:p-8 border border-[#E2E8E5] shadow-xl space-y-6 animate-in fade-in duration-200">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-xl font-bold font-heading text-[#0D2B26]">Nhật Ký Giao Dịch & Tra Soát SePay</h3>
+                <p className="text-xs text-[#5F736E] mt-0.5">
+                  Lưu vết toàn bộ giao dịch biến động số dư từ SePay Webhook (Thành công, chuyển thiếu tiền, sai cú pháp).
+                </p>
+              </div>
+
+              <button
+                onClick={fetchPaymentLogs}
+                className="p-2.5 rounded-xl bg-[#FAF8F5] hover:bg-[#EEF5F3] text-[#013E37] border border-[#E2E8E5] cursor-pointer flex items-center gap-1.5 text-xs font-bold"
+                title="Tải lại nhật ký"
+              >
+                <RefreshCw size={15} className={loadingPaymentLogs ? 'animate-spin' : ''} />
+                <span>Làm Mới</span>
+              </button>
+            </div>
+
+            {loadingPaymentLogs ? (
+              <div className="py-20 text-center">
+                <Loader2 className="w-8 h-8 animate-spin mx-auto text-[#267D71] mb-2" />
+                <p className="text-xs text-[#5F736E]">Đang tải dữ liệu nhật ký giao dịch...</p>
+              </div>
+            ) : paymentLogs.length === 0 ? (
+              <div className="py-16 text-center text-[#5F736E] border-2 border-dashed border-[#E2E8E5] rounded-3xl">
+                <ShieldCheck size={32} className="mx-auto mb-2 opacity-40 text-[#267D71]" />
+                <p className="font-semibold text-sm">Chưa có bản ghi nhật ký SePay nào.</p>
+                <p className="text-xs text-[#8C9E9A] mt-1">Các giao dịch webhook từ SePay sẽ tự động lưu vết tại đây.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-[#FAF8F5] text-[#5F736E] uppercase font-bold text-[10px] tracking-wider border-b border-[#E2E8E5]">
+                    <tr>
+                      <th className="py-3 px-4">Thời Gian</th>
+                      <th className="py-3 px-4">Trạng Thái</th>
+                      <th className="py-3 px-4">Mã Đơn Hàng</th>
+                      <th className="py-3 px-4">Số Tiền Nhận</th>
+                      <th className="py-3 px-4">Thông Điệp Tra Soát</th>
+                      <th className="py-3 px-4">Giao Dịch Ngân Hàng</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#E2E8E5]/60">
+                    {paymentLogs.map((log) => {
+                      const createdDate = log.createdAt ? new Date(log.createdAt).toLocaleString('vi-VN') : '—';
+                      const isSuccess = log.status === 'SUCCESS';
+                      const isPartial = log.status === 'PARTIAL_PAYMENT';
+                      const isInvalidCode = log.status === 'INVALID_CODE';
+
+                      return (
+                        <tr key={log.id} className="hover:bg-[#FAF8F5]/60 transition-colors">
+                          <td className="py-3 px-4 text-[#5F736E] font-mono text-[11px] whitespace-nowrap">
+                            {createdDate}
+                          </td>
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            {isSuccess ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold">
+                                <CheckCircle2 size={12} /> Thành Công
+                              </span>
+                            ) : isPartial ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[11px] font-bold">
+                                <AlertCircle size={12} /> Thiếu Tiền
+                              </span>
+                            ) : isInvalidCode ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-orange-50 text-orange-700 border border-orange-200 text-[11px] font-bold">
+                                <Clock size={12} /> Sai Cú Pháp
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200 text-[11px] font-bold">
+                                <XCircle size={12} /> {log.status}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 font-mono font-bold text-[#013E37]">
+                            {log.orderCode || '—'}
+                          </td>
+                          <td className="py-3 px-4 font-mono font-bold text-[#0D2B26]">
+                            {(log.transferAmount || 0).toLocaleString('vi-VN')} đ
+                          </td>
+                          <td className="py-3 px-4 text-[#4A5D58] max-w-xs truncate" title={log.message}>
+                            {log.message}
+                          </td>
+                          <td className="py-3 px-4 text-[#5F736E] font-mono text-[11px]">
+                            {log.payload?.gateway ? `${log.payload.gateway} (#${log.payload.id || ''})` : `#${log.payload?.id || '—'}`}
                           </td>
                         </tr>
                       );

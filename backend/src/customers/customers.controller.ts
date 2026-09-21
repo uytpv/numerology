@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Query, UseGuards, BadRequestException } from '@nestjs/common';
 import { CustomersService } from './customers.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { AuthGuard } from '../auth/guards/auth.guard';
@@ -6,7 +6,6 @@ import { CurrentUser, UserPayload } from '../auth/decorators/current-user.decora
 import { FirebaseService } from '../firebase/firebase.service';
 
 @Controller('api/v1/customers')
-@UseGuards(AuthGuard)
 export class CustomersController {
   constructor(
     private customersService: CustomersService,
@@ -14,9 +13,22 @@ export class CustomersController {
   ) {}
 
   /**
-   * Tạo bản đồ và lưu thông tin khách hàng tra cứu
+   * Tính toán toàn bộ 21 chỉ số Pythagoras chuẩn hóa (Single Source of Truth)
+   * Public endpoint: Dành cho cả Guest lẫn User đã đăng nhập
+   */
+  @Post('calculate')
+  calculate(@Body() body: { fullName: string; dob: string; gender?: string }) {
+    if (!body?.fullName || !body?.dob) {
+      throw new BadRequestException('Vui lòng cung cấp đầy đủ fullName và dob');
+    }
+    return this.customersService.calculateFullNumerologyProfile(body.fullName, body.dob, body.gender);
+  }
+
+  /**
+   * Tạo bản đồ và lưu thông tin khách hàng tra cứu (Bảo vệ bằng AuthGuard)
    */
   @Post()
+  @UseGuards(AuthGuard)
   async create(
     @Body() dto: CreateCustomerDto,
     @CurrentUser() user: any,
@@ -28,6 +40,7 @@ export class CustomersController {
    * Lấy thông tin bản đồ tính toán chi tiết của khách hàng
    */
   @Get(':id')
+  @UseGuards(AuthGuard)
   async findOne(
     @Param('id') id: string,
     @CurrentUser() user: any,
@@ -40,6 +53,7 @@ export class CustomersController {
    * Lấy báo cáo phân tích bằng AI dựa theo ngôn ngữ và Tier mở khóa
    */
   @Get(':id/report')
+  @UseGuards(AuthGuard)
   async getReport(
     @Param('id') id: string,
     @Query('tier') tier: string,

@@ -1,4 +1,5 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { FieldValue } from 'firebase-admin/firestore';
 import { FirebaseService } from '../firebase/firebase.service';
 import { VietQRService, VietQRResponse } from './vietqr.service';
 import { EmailService } from './email.service';
@@ -308,107 +309,122 @@ export class PaymentService {
   }
 
   /**
-   * Xử lý xác nhận đơn hàng thành công (Idempotent)
+   * Xử lý xác nhận đơn hàng thành công (Idempotent & Atomic Transaction)
    */
   async processSuccessfulOrder(orderCodeInput: string | number, transactionDetails?: any): Promise<boolean> {
     const orderCode = orderCodeInput.toString();
     const db = this.firebaseService.db();
     const orderRef = db.collection('orders').doc(orderCode);
-    const orderDoc = await orderRef.get();
 
-    if (!orderDoc.exists) {
-      this.logger.warn(`Không tìm thấy đơn hàng #${orderCode} trong Firestore!`);
+    let orderData: any = null;
+    let shouldSendEmail = false;
+
+    try {
+      const activated = await db.runTransaction(async (transaction) => {
+        const orderDoc = await transaction.get(orderRef);
+        if (!orderDoc.exists) {
+          this.logger.warn(`Không tìm thấy đơn hàng #${orderCode} trong Firestore!`);
+          return false;
+        }
+
+        orderData = orderDoc.data();
+        if (orderData.status === 'PAID') {
+          this.logger.log(`[Idempotent] Đơn hàng #${orderCode} đã được kích hoạt trước đó.`);
+          return true;
+        }
+
+        // 1. Cập nhật trạng thái đơn hàng thành PAID bên trong transaction
+        const paidAt = new Date().toISOString();
+        transaction.update(orderRef, {
+          status: 'PAID',
+          transactionDetails: transactionDetails || {},
+          completedAt: paidAt,
+          updatedAt: paidAt,
+        });
+
+        // 2. Cập nhật quyền lợi cho User tài khoản (Atomic Credits Increment & Subscription)
+        if (orderData.userId && orderData.userId !== 'guest_user') {
+          const userRef = db.collection('users').doc(orderData.userId);
+          const userDoc = await transaction.get(userRef);
+          const addedCredits = Number(orderData.creditsGranted) || 0;
+
+          const updatePayload: any = {
+            updatedAt: paidAt,
+          };
+
+          if (addedCredits > 0) {
+            updatePayload.credits = FieldValue.increment(addedCredits);
+          }
+
+          // Xử lý gói Coach VIP Subscription
+          if (orderData.planType === 'coach_sub' || (orderData.durationDays && orderData.durationDays > 0)) {
+            const now = new Date();
+            const durationDays = orderData.durationDays || 365;
+            const expiresAt = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000).toISOString();
+
+            updatePayload.role = 'coach';
+            updatePayload.isCoach = true;
+            updatePayload.subscription = {
+              planId: orderData.planId,
+              planName: orderData.planName,
+              planType: orderData.planType,
+              status: 'ACTIVE',
+              startDate: now.toISOString(),
+              expiresAt: expiresAt,
+            };
+          }
+
+          if (userDoc.exists) {
+            transaction.update(userRef, updatePayload);
+          } else {
+            transaction.set(userRef, {
+              ...updatePayload,
+              credits: addedCredits,
+              createdAt: paidAt,
+            }, { merge: true });
+          }
+        }
+
+        shouldSendEmail = true;
+        return true;
+      });
+
+      if (!activated) return false;
+
+      // 3. Mở khóa hồ sơ cá nhân (customerId) nếu có
+      if (orderData?.customerId && orderData.targetTier > 0) {
+        try {
+          await this.customersService.unlockTier(orderData.customerId, orderData.targetTier);
+          this.logger.log(`Đã mở khóa Tier ${orderData.targetTier} cho customer ${orderData.customerId}`);
+        } catch (err: any) {
+          this.logger.error(`Lỗi mở khóa customer:`, err.message);
+        }
+      }
+
+      // 4. Gửi email xác nhận thanh toán tự động
+      if (shouldSendEmail && orderData?.userEmail) {
+        try {
+          await this.emailService.sendPaymentSuccessEmail({
+            toEmail: orderData.userEmail,
+            userName: orderData.userName || orderData.userEmail,
+            orderCode: orderData.orderCode || orderCode,
+            planName: orderData.planName,
+            amount: orderData.amount,
+            creditsGranted: orderData.creditsGranted,
+            durationDays: orderData.durationDays,
+            features: orderData.features,
+            paidAt: new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+          });
+        } catch (emailErr: any) {
+          this.logger.error(`Lỗi gửi email xác nhận đơn hàng #${orderCode}:`, emailErr.message);
+        }
+      }
+
+      return true;
+    } catch (txError: any) {
+      this.logger.error(`Lỗi Transaction khi kích hoạt đơn #${orderCode}:`, txError.message);
       return false;
     }
-
-    const orderData = orderDoc.data() as any;
-    if (orderData.status === 'PAID') {
-      this.logger.log(`Đơn hàng #${orderCode} đã được kích hoạt trước đó.`);
-      return true;
-    }
-
-    this.logger.log(`--- XỬ LÝ KÍCH HOẠT ĐƠN HÀNG #${orderCode} [${orderData.planName}] ---`);
-
-    // 1. Mở khóa hồ sơ cá nhân (customerId) nếu có
-    if (orderData.customerId && orderData.targetTier > 0) {
-      try {
-        await this.customersService.unlockTier(orderData.customerId, orderData.targetTier);
-        this.logger.log(`Đã mở khóa Tier ${orderData.targetTier} cho customer ${orderData.customerId}`);
-      } catch (err: any) {
-        this.logger.error(`Lỗi mở khóa customer:`, err.message);
-      }
-    }
-
-    // 2. Cập nhật quyền lợi cho User tài khoản (Credits & Subscription)
-    if (orderData.userId && orderData.userId !== 'guest_user') {
-      const userRef = db.collection('users').doc(orderData.userId);
-      const userDoc = await userRef.get();
-      const userData = userDoc.exists ? userDoc.data() : {};
-
-      const currentCredits = userData?.credits || 0;
-      const addedCredits = orderData.creditsGranted || 0;
-      const newCredits = currentCredits + addedCredits;
-
-      const updatePayload: any = {
-        updatedAt: new Date().toISOString(),
-      };
-
-      if (addedCredits > 0) {
-        updatePayload.credits = newCredits;
-      }
-
-      // Xử lý gói Coach VIP Subscription
-      if (orderData.planType === 'coach_sub' || orderData.durationDays > 0) {
-        const now = new Date();
-        const durationDays = orderData.durationDays || 365;
-        const expiresAt = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000).toISOString();
-
-        updatePayload.role = 'coach';
-        updatePayload.subscription = {
-          planId: orderData.planId,
-          planName: orderData.planName,
-          planType: orderData.planType,
-          status: 'ACTIVE',
-          startDate: now.toISOString(),
-          expiresAt: expiresAt,
-        };
-      }
-
-      if (Object.keys(updatePayload).length > 1) {
-        await userRef.set(updatePayload, { merge: true });
-        this.logger.log(`Đã cập nhật User ${orderData.userId}: +${addedCredits} credits (Tổng: ${newCredits}), Subscription cập nhật.`);
-      }
-    }
-
-    // 3. Cập nhật trạng thái đơn hàng thành PAID
-    const paidAt = new Date().toISOString();
-    await orderRef.update({
-      status: 'PAID',
-      transactionDetails: transactionDetails || {},
-      completedAt: paidAt,
-      updatedAt: paidAt,
-    });
-
-    // 4. Gửi email xác nhận thanh toán tự động
-    if (orderData.userEmail) {
-      try {
-        await this.emailService.sendPaymentSuccessEmail({
-          toEmail: orderData.userEmail,
-          userName: orderData.userName || orderData.userEmail,
-          orderCode: orderData.orderCode,
-          planName: orderData.planName,
-          amount: orderData.amount,
-          creditsGranted: orderData.creditsGranted,
-          durationDays: orderData.durationDays,
-          features: orderData.features,
-          paidAt: new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
-        });
-      } catch (emailErr: any) {
-        this.logger.error(`Lỗi gửi email xác nhận đơn hàng #${orderCode}:`, emailErr.message);
-      }
-    }
-
-    return true;
   }
 
   /**

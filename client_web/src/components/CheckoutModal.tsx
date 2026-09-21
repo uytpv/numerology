@@ -255,44 +255,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     setTimeout(() => setSupportCopied(false), 2500);
   };
 
-  // Kiểm tra trạng thái thanh toán từ Ngân hàng / Backend (An toàn, không cấp quyền ảo)
-  const handleCheckPaymentStatus = async () => {
-    if (!orderData?.orderCode) return;
-    try {
-      setLoading(true);
-      setError(null);
-
-      // 1. Kiểm tra trạng thái trực tiếp từ Firestore doc 'orders'
-      const orderRef = doc(db, 'orders', orderData.orderCode.toString());
-      const orderSnap = await getDoc(orderRef);
-      if (orderSnap.exists() && orderSnap.data()?.status === 'PAID') {
-        triggerSuccess();
-        return;
-      }
-
-      // 2. Gọi backend kiểm tra nếu Firestore chưa cập nhật
-      try {
-        const res = await axios.get(`${backendUrl}/api/v1/payments/order-status/${orderData.orderCode}`);
-        if (res.data?.status === 'PAID') {
-          triggerSuccess();
-          return;
-        }
-      } catch (apiErr) {
-        // bỏ qua lỗi backend
-      }
-
-      // 3. Nếu chưa ghi nhận PAID: hiển thị hướng dẫn CSKH gửi biên lai
-      setShowSupportGuide(true);
-      setError('Hệ thống chưa ghi nhận biến động số dư từ ngân hàng (thường mất 1 - 2 phút). Nếu bạn đã chuyển khoản thành công và bị trừ tiền, vui lòng gửi biên lai qua Zalo CSKH bên dưới để được mở khóa ngay!');
-    } catch (err: any) {
-      console.error('Lỗi kiểm tra thanh toán:', err);
-      setShowSupportGuide(true);
-      setError('Tạm thời chưa thể đối soát tự động với ngân hàng. Quý khách vui lòng gửi biên lai qua kênh CSKH bên dưới để được kích hoạt thủ công.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   if (!isOpen) return null;
 
   const formatTime = (seconds: number) => {
@@ -607,26 +569,32 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     </div>
                   )}
 
-                  <button
-                    onClick={handleCheckPaymentStatus}
-                    disabled={loading}
-                    className="w-full py-3.5 rounded-2xl btn-primary text-xs font-bold flex items-center justify-center gap-2 shadow-md cursor-pointer"
-                  >
-                    {loading ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
-                    {loading ? 'Đang kết nối kiểm tra ngân hàng...' : '⚡ Tôi Đã Chuyển Khoản / Kiểm Tra Kích Hoạt'}
-                  </button>
+                  {/* THANH TRẠNG THÁI TỰ ĐỘNG LẮNG NGHE GIAO DỊCH SEPAY & HỖ TRỢ CSKH */}
+                  <div className="p-3.5 rounded-2xl bg-[#F0FDF4] border border-[#BBF7D0] flex items-center justify-between transition-all">
+                    <div className="flex items-center gap-2.5">
+                      <div className="relative flex items-center justify-center shrink-0">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping absolute" />
+                        <span className="w-2 h-2 rounded-full bg-emerald-600 relative" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-xs font-semibold text-[#0D2B26]">Đang tự động lắng nghe giao dịch</p>
+                        <p className="text-[10px] text-[#5F736E]">Hệ thống tự kích hoạt ngay khi ngân hàng báo có (1 - 3 giây qua SePay)</p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-mono font-semibold text-emerald-700 bg-emerald-100/90 px-2 py-0.5 rounded-full shrink-0">
+                      Tự động
+                    </span>
+                  </div>
 
                   <div className="flex items-center justify-between text-[11px] text-[#5F736E] px-1">
-                    <span>* Tự động duyệt qua SePay Webhook</span>
-                    {!showSupportGuide && (
-                      <button
-                        type="button"
-                        onClick={() => setShowSupportGuide(true)}
-                        className="text-[#267D71] hover:underline font-medium cursor-pointer"
-                      >
-                        Gặp sự cố chuyển tiền?
-                      </button>
-                    )}
+                    <span>* Xác thực tự động bảo mật qua VietQR & SePay</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowSupportGuide(prev => !prev)}
+                      className="text-[#267D71] hover:underline font-medium cursor-pointer flex items-center gap-1"
+                    >
+                      <span>{showSupportGuide ? 'Thu gọn hỗ trợ' : 'Gặp sự cố chuyển tiền?'}</span>
+                    </button>
                   </div>
                 </div>
 

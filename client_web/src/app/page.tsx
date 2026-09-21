@@ -99,7 +99,26 @@ export default function HomePage() {
 
     try {
       const fullName = `${lastName} ${firstName}`;
-      const numerologyMap = calculateNumerologyMap(fullName, dobFormatted);
+      let numerologyMap: any = null;
+      
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+        const res = await fetch(`${apiUrl}/api/v1/customers/calculate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fullName, dob: dobFormatted, gender: genderInput }),
+        });
+        if (res.ok) {
+          const apiData = await res.json();
+          numerologyMap = apiData.map;
+        }
+      } catch (apiErr) {
+        console.warn('Lỗi gọi API tính toán, dùng fallback cục bộ:', apiErr);
+      }
+
+      if (!numerologyMap) {
+        numerologyMap = calculateNumerologyMap(fullName, dobFormatted);
+      }
 
       // 1. NẾU ĐÃ ĐĂNG NHẬP: KIỂM TRA TRÙNG LẶP & LƯU FIRESTORE
       if (user) {

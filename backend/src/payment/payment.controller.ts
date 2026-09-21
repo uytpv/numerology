@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, Headers, HttpCode, HttpStatus, BadRequestException, Req } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Headers, HttpCode, HttpStatus, BadRequestException, ForbiddenException, UnauthorizedException, Req } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { ConfigService } from '@nestjs/config';
 import { SePayService } from './sepay.service';
@@ -105,12 +105,16 @@ export class PaymentController {
   }
 
   /**
-   * Endpoint Test Sandbox dành riêng cho Merchant SePay test kiểm thử
+   * Endpoint Test Sandbox dành riêng cho Merchant SePay test kiểm thử (Chỉ chạy ở Development)
    */
   @Post('sepay/test-simulate')
   async simulateSePayTestTransaction(
     @Body() body: { orderCode: string; amount?: number; gateway?: string }
   ) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new ForbiddenException('Endpoint giả lập thanh toán bị vô hiệu hóa trong môi trường production');
+    }
+
     if (!body.orderCode) {
       throw new BadRequestException('Thiếu orderCode để giả lập test');
     }
@@ -125,14 +129,24 @@ export class PaymentController {
       content: `TSH${body.orderCode.replace(/^TSH/i, '')} chuyen khoan thanh toan`,
       transferType: 'in',
       transferAmount: amount,
-    });
+    }, this.configService.get<string>('SEPAY_SECRET_KEY'));
   }
 
   /**
-   * Endpoint Xác nhận thanh toán qua Admin Dashboard
+   * Endpoint Xác nhận thanh toán qua Admin Dashboard (Được bảo vệ bằng Secret Key)
    */
   @Post('confirm-payment')
-  async confirmPayment(@Body() body: { orderCode: string | number; transactionId?: string }) {
+  async confirmPayment(
+    @Body() body: { orderCode: string | number; transactionId?: string; adminKey?: string },
+    @Headers('x-admin-key') adminHeader?: string,
+  ) {
+    const configuredKey = this.configService.get<string>('ADMIN_SECRET_KEY') || this.configService.get<string>('SEPAY_SECRET_KEY');
+    const providedKey = body.adminKey || adminHeader;
+
+    if (configuredKey && providedKey !== configuredKey) {
+      throw new UnauthorizedException('Không có quyền xác nhận đơn hàng thủ công (Sai Secret Key)');
+    }
+
     if (!body.orderCode) {
       throw new BadRequestException('Thiếu orderCode');
     }

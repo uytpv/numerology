@@ -66,12 +66,12 @@ export class SePayService {
   async processWebhook(payload: SePayWebhookPayload, authHeader?: string): Promise<{ success: boolean; message: string; orderCode?: string }> {
     this.logger.log(`Nhận SePay Webhook: Giao dịch #${payload.id} - ${payload.transferAmount} VND - Nội dung: "${payload.content}"`);
 
-    // 1. Xác thực bảo mật nếu có secretKey
-    if (this.secretKey && authHeader) {
+    // 1. Xác thực bảo mật bắt buộc qua SePay Secret Key (Chống bypass bằng cách bỏ trống header)
+    if (this.secretKey) {
       const isValid = this.verifyWebhookAuth(authHeader);
       if (!isValid) {
-        this.logger.warn(`Từ chối SePay Webhook do sai secret key trong Authorization header!`);
-        throw new UnauthorizedException('Chữ ký xác thực SePay không hợp lệ');
+        this.logger.warn(`Từ chối SePay Webhook do thiếu hoặc sai secret key trong Authorization header!`);
+        throw new UnauthorizedException('Chữ ký xác thực SePay không hợp lệ hoặc thiếu Authorization header');
       }
     }
 
@@ -87,6 +87,13 @@ export class SePayService {
 
     if (!orderCode) {
       this.logger.warn(`Không tìm thấy mã đơn hàng TSHxxxxxx trong nội dung chuyển khoản: "${rawContent}"`);
+      await this.logPaymentAudit({
+        status: 'INVALID_CODE',
+        transferAmount: Number(payload.transferAmount) || 0,
+        orderCode: null,
+        message: `Không tìm thấy mã TSH trong nội dung: "${rawContent}"`,
+        payload,
+      });
       return { success: false, message: 'Không tìm thấy mã đơn hàng TSHxxxxxx trong nội dung' };
     }
 
@@ -97,6 +104,13 @@ export class SePayService {
 
     if (!orderDoc.exists) {
       this.logger.warn(`Đơn hàng #${orderCode} không tồn tại trong Firestore!`);
+      await this.logPaymentAudit({
+        status: 'ORDER_NOT_FOUND',
+        transferAmount: Number(payload.transferAmount) || 0,
+        orderCode,
+        message: `Đơn hàng #${orderCode} không tồn tại trong hệ thống`,
+        payload,
+      });
       return { success: false, message: `Đơn hàng #${orderCode} không tồn tại`, orderCode };
     }
 
@@ -124,6 +138,13 @@ export class SePayService {
         },
         updatedAt: new Date().toISOString(),
       });
+      await this.logPaymentAudit({
+        status: 'PARTIAL_PAYMENT',
+        transferAmount: receivedAmount,
+        orderCode,
+        message: `Chuyển thiếu tiền: Nhận ${receivedAmount} / Cần ${expectedAmount}`,
+        payload,
+      });
       return { success: false, message: 'Số tiền chuyển khoản không đủ', orderCode };
     }
 
@@ -140,10 +161,39 @@ export class SePayService {
 
     this.logger.log(`[SePay Webhook] Kích hoạt thành công đơn hàng #${orderCode} cho khách hàng ${orderData.userName || orderData.userEmail}`);
 
+    await this.logPaymentAudit({
+      status: 'SUCCESS',
+      transferAmount: receivedAmount,
+      orderCode,
+      message: `Kích hoạt thành công đơn hàng #${orderCode}`,
+      payload,
+    });
+
     return {
       success: activated,
       message: `Đã kích hoạt thành công đơn hàng #${orderCode}`,
       orderCode,
     };
+  }
+
+  /**
+   * Lưu nhật ký kiểm toán giao dịch SePay vào Firestore
+   */
+  private async logPaymentAudit(data: {
+    status: 'SUCCESS' | 'PARTIAL_PAYMENT' | 'ORDER_NOT_FOUND' | 'INVALID_CODE' | 'IGNORED';
+    transferAmount: number;
+    orderCode?: string | null;
+    message: string;
+    payload: any;
+  }) {
+    try {
+      const db = this.firebaseService.db();
+      await db.collection('payment_logs').add({
+        ...data,
+        createdAt: new Date().toISOString(),
+      });
+    } catch (err: any) {
+      this.logger.error(`Lỗi ghi payment_logs:`, err.message);
+    }
   }
 }
