@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { calculateNumerologyMap, formatTitleCase } from '@/lib/numerologyReportGenerator';
+import { getApiBaseUrl } from '@/lib/aiReportService';
 import { Sparkles, Compass, Briefcase, User, Calendar, ShieldCheck, Heart, Baby, Globe, ArrowRight } from 'lucide-react';
 
 export default function HomePage() {
@@ -102,7 +103,7 @@ export default function HomePage() {
       let numerologyMap: any = null;
       
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+        const apiUrl = getApiBaseUrl();
         const res = await fetch(`${apiUrl}/api/v1/customers/calculate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

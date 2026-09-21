@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Calendar, ChevronLeft, ChevronRight, X, Sparkles, CheckCircle2, AlertCircle, Lock } from 'lucide-react';
 import { generatePersonalMonthCalendar, MonthEnergyReport, PersonalDayForecast } from '@/lib/personalCalendarGenerator';
 
@@ -23,8 +24,24 @@ export function PersonalCalendarModal({
   const [selectedYear, setSelectedYear] = useState<number>(currentDate.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number>(currentDate.getMonth() + 1);
   const [selectedDayForecast, setSelectedDayForecast] = useState<PersonalDayForecast | null>(null);
+  const [mounted, setMounted] = useState(false);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
+  if (!isOpen || !mounted) return null;
 
   const calendarData: MonthEnergyReport = generatePersonalMonthCalendar(
     birthDate || '27/08/1980',
@@ -52,9 +69,9 @@ export function PersonalCalendarModal({
     setSelectedDayForecast(null);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0D2B26]/80 backdrop-blur-md overflow-y-auto">
-      <div className="bg-white border border-[#E2E8E5] rounded-3xl max-w-4xl w-full p-6 sm:p-8 relative shadow-2xl my-8 space-y-6">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-[#0D2B26]/80 backdrop-blur-md overflow-y-auto">
+      <div className="bg-white border border-[#E2E8E5] rounded-3xl max-w-4xl w-full p-6 sm:p-8 relative shadow-2xl my-auto max-h-[90vh] overflow-y-auto space-y-6">
         {/* HEADER */}
         <div className="flex items-center justify-between border-b border-[#E2E8E5] pb-4">
           <div className="flex items-center gap-3">
@@ -225,6 +242,7 @@ export function PersonalCalendarModal({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

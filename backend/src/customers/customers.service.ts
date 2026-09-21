@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { FirebaseService } from '../firebase/firebase.service';
 import { AIService } from '../ai/ai.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
@@ -79,6 +79,35 @@ export class CustomersService {
   }
 
   /**
+   * Lấy bản đồ hiển thị công khai (Public view cho khách xem qua link chia sẻ)
+   * Chỉ trả về các chỉ số và báo cáo, loại bỏ thông tin riêng tư (email, phone, coachNotes)
+   */
+  async findPublicMap(id: string): Promise<any> {
+    const db = this.firebaseService.db();
+    const doc = await db.collection('customers').doc(id).get();
+
+    if (!doc.exists) {
+      throw new NotFoundException('Không tìm thấy thông tin bản đồ');
+    }
+
+    const data = doc.data() as any;
+    return {
+      id: doc.id,
+      first_name: data.first_name || '',
+      last_name: data.last_name || '',
+      dob: data.dob || '',
+      gender: data.gender || 'other',
+      map: data.map || {},
+      reports: data.reports || {},
+      unlockedTier: data.unlockedTier || 0,
+      tier: data.tier || 'free',
+      is_paid: Boolean(data.is_paid || data.tier === 'paid' || data.unlockedTier >= 3),
+      life_focus: data.life_focus || ['career', 'money', 'love'],
+      isPublicView: true,
+    };
+  }
+
+  /**
    * Lấy báo cáo AI phân tích chi tiết. Có cơ chế caching tránh gọi API nhiều lần tốn phí
    */
   async getAIReport(customerId: string, tier: number, language: string, userId: string, isAdmin: boolean = false): Promise<any> {
@@ -125,6 +154,62 @@ export class CustomersService {
   }
 
   /**
+   * Sinh bài luận giải AI độc bản trực tiếp (Hỗ trợ cả Guest lẫn Khách đã lưu)
+   */
+  async generateDirectAIReport(dto: {
+    fullName: string;
+    dob: string;
+    map: any;
+    tier?: number;
+    language?: string;
+    readingProfile?: string;
+    customerId?: string;
+  }): Promise<any> {
+    const { fullName, dob, map, tier = 0, language = 'vi', readingProfile = 'career', customerId } = dto;
+
+    if (customerId) {
+      const db = this.firebaseService.db();
+      const docRef = db.collection('customers').doc(customerId);
+      const docSnap = await docRef.get();
+      if (docSnap.exists) {
+        const data = docSnap.data() as any;
+        const reports = data?.reports || {};
+        const cacheKey = `${tier}_${language}_${readingProfile}`;
+        if (reports[cacheKey]) {
+          console.log(`--- [CACHE HIT] Sử dụng bài luận giải AI lưu sẵn cho ${customerId} ---`);
+          return reports[cacheKey];
+        }
+
+        const aiReport = await this.aiService.generatePersonalizedReport({
+          fullName,
+          dob,
+          map,
+          tier,
+          language,
+          readingProfile,
+        });
+
+        reports[cacheKey] = aiReport;
+        await docRef.update({
+          reports,
+          updatedAt: new Date().toISOString(),
+        });
+
+        return aiReport;
+      }
+    }
+
+    return this.aiService.generatePersonalizedReport({
+      fullName,
+      dob,
+      map,
+      tier,
+      language,
+      readingProfile,
+    });
+  }
+
+  /**
    * Mở khóa các Tier nâng cao (Sử dụng bởi hệ thống thanh toán Webhook)
    */
   async unlockTier(customerId: string, tier: number): Promise<any> {
@@ -148,6 +233,61 @@ export class CustomersService {
     }
 
     return false;
+  }
+
+  /**
+   * Mở khóa hồ sơ khách hàng bằng 1 Credit trong tài khoản User
+   */
+  async unlockCustomerWithCredit(userId: string, customerId: string): Promise<any> {
+    const db = this.firebaseService.db();
+    const userRef = db.collection('users').doc(userId);
+    const customerRef = db.collection('customers').doc(customerId);
+
+    return db.runTransaction(async (transaction) => {
+      const userDoc = await transaction.get(userRef);
+      if (!userDoc.exists) {
+        throw new NotFoundException('Không tìm thấy thông tin tài khoản người dùng');
+      }
+
+      const customerDoc = await transaction.get(customerRef);
+      if (!customerDoc.exists) {
+        throw new NotFoundException('Không tìm thấy hồ sơ bản đồ cần mở khóa');
+      }
+
+      const userData = userDoc.data() as any;
+      const isVipSubscription = userData?.subscription?.status === 'ACTIVE' && userData?.subscription?.planType === 'coach_vip';
+      const credits = Number(userData?.credits) || 0;
+
+      if (!isVipSubscription && credits < 1) {
+        throw new BadRequestException('Tài khoản của bạn không đủ lượt mở bài (Cần 1 lượt). Vui lòng nạp thêm lượt!');
+      }
+
+      const now = new Date().toISOString();
+
+      // Trừ 1 credit nếu không phải gói vô hạn VIP
+      if (!isVipSubscription) {
+        transaction.update(userRef, {
+          credits: credits - 1,
+          updatedAt: now,
+        });
+      }
+
+      // Mở khóa Tier 3 / VIP cho hồ sơ khách hàng
+      transaction.update(customerRef, {
+        unlockedTier: 3,
+        tier: 'paid',
+        is_paid: true,
+        updatedAt: now,
+      });
+
+      console.log(`--- [CREDIT DEDUCT] User ${userId} đã dùng 1 credit để mở khóa hồ sơ ${customerId} ---`);
+
+      return {
+        success: true,
+        message: 'Đã mở khóa bài luận giải thành công bằng 1 lượt!',
+        remainingCredits: isVipSubscription ? 'Vô hạn' : credits - 1,
+      };
+    });
   }
 
   /**

@@ -25,6 +25,27 @@ export class CustomersController {
   }
 
   /**
+   * Sinh bài luận giải AI độc bản trực tiếp (Public endpoint)
+   */
+  @Post('generate-report')
+  async generateReport(
+    @Body() body: {
+      fullName: string;
+      dob: string;
+      map: any;
+      tier?: number;
+      language?: string;
+      readingProfile?: string;
+      customerId?: string;
+    }
+  ) {
+    if (!body?.fullName || !body?.dob || !body?.map) {
+      throw new BadRequestException('Vui lòng cung cấp đầy đủ fullName, dob và map');
+    }
+    return this.customersService.generateDirectAIReport(body);
+  }
+
+  /**
    * Tạo bản đồ và lưu thông tin khách hàng tra cứu (Bảo vệ bằng AuthGuard)
    */
   @Post()
@@ -34,6 +55,26 @@ export class CustomersController {
     @CurrentUser() user: any,
   ) {
     return this.customersService.create(dto, user.uid);
+  }
+
+  /**
+   * Dùng 1 Credit để mở khóa bài luận giải VIP cho hồ sơ khách hàng
+   */
+  @Post(':id/unlock-with-credit')
+  @UseGuards(AuthGuard)
+  async unlockWithCredit(
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.customersService.unlockCustomerWithCredit(user.uid, id);
+  }
+
+  /**
+   * Lấy thông tin bản đồ hiển thị công khai (Cho phép xem qua link chia sẻ không bắt buộc đăng nhập)
+   */
+  @Get(':id/public')
+  async getPublicMap(@Param('id') id: string) {
+    return this.customersService.findPublicMap(id);
   }
 
   /**

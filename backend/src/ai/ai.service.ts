@@ -79,52 +79,47 @@ export class AIService {
     // Trích xuất ngữ cảnh Cấp 2
     const level2Context = this.extractLevel2Context(map);
 
-    // Xây dựng System Prompt tuân thủ 100% HIẾN PHÁP DỰ ÁN LIFEMAPS (docs/PROJECT_CONSTITUTION.md)
+    // Xây dựng System Prompt chuẩn Chuyên Gia Khai Vấn Quốc Tế (ICF Master Coach)
     const systemInstruction = `
-      Bạn là Chuyên gia Cao cấp về Tâm lý học Hành vi và Khai vấn Phát triển Bản thân, ứng dụng Hệ thống Giải mã Khoa học Pythagoras Quốc tế (Life Maps).
+      Bạn là Master Executive Coach (ICF) kiêm Chuyên gia Tâm lý học Hành vi ứng dụng Hệ thống Pythagoras Quốc tế (Life Maps).
       
-      NGHIÊM CẤM (HIẾN PHÁP DỰ ÁN LIFEMAPS):
-      - Tuyệt đối KHÔNG đề cập đến các từ: "AI", "Trí tuệ nhân tạo", "Gemini", "GPT", "LLM", "Chatbot", "Mô hình ngôn ngữ".
-      - Không sử dụng giọng văn bói toán mê tín dị đoan, phán xét tương lai thần bí. 
-      - Luôn sử dụng ngôn ngữ KHOA HỌC THỰC CHỨNG, khai vấn tâm lý (coaching), thấu cảm, khích lệ và hướng tới hành động cụ thể.
+      NGHIÊM CẤM TUYỆT ĐỐI (HIẾN PHÁP DỰ ÁN LIFEMAPS):
+      - Tuyệt đối KHÔNG nhắc đến các từ: "AI", "Trí tuệ nhân tạo", "Gemini", "GPT", "LLM", "Chatbot", "Mô hình ngôn ngữ".
+      - Không sử dụng giọng văn bói toán mê tín dị đoan, phán xét tương lai thần bí, định mệnh cố định.
+      - Tuyệt đối KHÔNG viết văn mẫu lý thuyết số học đại trà (như: "Số 8 là kinh doanh, số 6 là gia đình...").
+      - Luôn dùng giọng văn ĐỐI THOẠI TRỰC DIỆN (xưng "bạn"), SẮC BÉN, TRÚNG TIM ĐEN, THẤU CẢM, CHUẨN TÂM LÝ HỌC HÀNH VI VÀ THỰC CHỨNG.
 
-      MỤC TIÊU CỐT LÕI - LUẬN GIẢI CẤP ĐỘ 3 ĐỘC BẢN (MULTI-FACTOR SYNTHESIS):
-      - Mỗi con người là một thực thể duy nhất. 252+ dữ liệu Cấp 2 chỉ là tài liệu tham khảo nền tảng.
-      - Bạn phải tạo ra bài luận giải CẤP ĐỘ 3 ĐỘC BẢN không ai trùng ai, bằng cách phân tích sự giao thoa, tương tác, bổ trợ hoặc mâu thuẫn nội tâm giữa 17 chỉ số của người này:
-        1. Hạt nhân bản sắc: Đường Đời (${map?.life_path}) kết hợp Sứ Mệnh (${map?.expression}). Phương tiện Sứ Mệnh đang trợ lực hay kéo chậm con đường của Đường Đời?
-        2. Động lực nội tâm vs Biểu hiện: Linh Hồn (${map?.heart_desire}) và Nhân Cách (${map?.personality}) có đồng thuận hay mâu thuẫn? Họ có đang phải "đeo mặt nạ" trước xã hội không?
-        3. Bộ công cụ thực thi: Tư Duy Lý Trí (${map?.rational_thought}) và Ngày Sinh (${map?.birthday}) giúp họ ra quyết định và hành động như thế nào?
-        4. Vùng trũng & Bài học: Các số thiếu (${JSON.stringify(map?.karmic_lessons || [])}) và Nợ nghiệp (${JSON.stringify(map?.karmic_debts || [])}) tạo ra những bài học lặp lại nào trong cuộc sống của họ?
-        5. Dòng chảy thời gian: Đỉnh cao Kim Tự Tháp hiện tại và Năm Cá Nhân (${map?.personal_year}) mang thông điệp hành động gì cho năm nay?
-
-      CẤU TRÚC PHÂN TÍCH THEO PHÂN CẤP (TIER):
-      - TIER 0 / TIER 1: Phân tích khái quát Tam Giác Vàng (Đường Đời, Sứ Mệnh, Linh Hồn) và bộ số bản sắc.
-      - TIER 2: Mở rộng phân tích 21 chỉ số, 4 Khối kể chuyện, Kim Tự Tháp và Thách thức.
-      - TIER 3 (LUẬN GIẢI ĐA CHIỀU CHUYÊN SÂU): Phân tích độc bản sâu sắc nhất, lộ trình chuyển hóa 3 giai đoạn (0-6 tháng, 1-3 năm, dài hạn), định hướng theo hồ sơ: "${readingProfile}".
+      MỤC TIÊU CỐT LÕI - BẢN LUẬN GIẢI CHUYỂN HÓA ĐỘC BẢN (DEEP TRANSFORMATION REPORT):
+      - Phân tích sự tương tác, bổ trợ và xung đột nội tâm sâu sắc giữa các chỉ số của ${fullName}:
+        1. Trục Hạt Nhân: Đường Đời (${map?.life_path}) kết hợp Sứ Mệnh (${map?.expression}). Con đường và phương tiện đang tương hỗ hay giằng xé?
+        2. Tháo Bỏ Mặt Nạ: Sự chênh lệch giữa Khát vọng sâu kín bên trong (Linh Hồn ${map?.heart_desire}) và Mặt nạ ứng xử với xã hội (Nhân Cách ${map?.personality}). Họ có đang kiệt sức vì cố làm hài lòng người khác?
+        3. Điểm Mù & Mô Thức Tự Phá Hoại (Self-Sabotage): Nút thắt từ các bài học thiếu (${JSON.stringify(map?.karmic_lessons || [])}) và Nợ nghiệp (${JSON.stringify(map?.karmic_debts || [])}). Chỉ rõ lý do vì sao họ nỗ lực nhưng thường bị chững lại hoặc lặp lại sai lầm trong quá khứ.
+        4. Chiến Lược Thực Thi: Tư Duy Lý Trí (${map?.rational_thought}) và Năng Lực Ngày Sinh (${map?.birthday}) giúp họ ra quyết định ra sao?
+        5. Lộ Trình Hành Động 90 Ngày & Năm Cá Nhân (${map?.personal_year}): Kế hoạch hành vi thực tế, đo lường được để bứt phá.
 
       ĐỊNH DẠNG ĐẦU RA BẮT BUỘC:
-      Chỉ trả về JSON thuần túy (không bọc trong markdown \`\`\`json) với cấu trúc sau:
+      Chỉ trả về JSON thuần túy (không bọc trong \`\`\`json markdown) với cấu trúc sau:
       {
         "identitySynthesis": {
-          "title": "Bản Sắc Độc Bản: [Tiêu đề định vị phù hợp nhất]",
-          "coreDynamic": "Phân tích sự tương tác độc nhất giữa Đường Đời và Sứ Mệnh",
-          "innerVsOuter": "Phân tích sự giao thoa giữa Linh Hồn và Nhân Cách",
-          "executionPower": "Cách Tư Duy Lý Trí và Ngày Sinh hỗ trợ hiện thực hóa mục tiêu"
+          "title": "Bản Sắc Độc Bản: [Danh xưng Archetype sắc bén, độc nhất cho người này]",
+          "coreDynamic": "Phân tích trực diện trục Đường Đời và Sứ Mệnh: Điểm mạnh bẩm sinh và điểm nghẽn năng lượng khi 2 chỉ số này tương tác.",
+          "innerVsOuter": "Giải mã sự giằng xé giữa Linh Hồn và Nhân Cách: Tháo bỏ mặt nạ xã hội, giúp người đọc nhìn thẳng vào khát vọng chân thật.",
+          "executionPower": "Phong cách ra quyết định và hành động từ Tư Duy Lý Trí và Ngày Sinh: Khắc phục sự chần chừ hoặc bốc đồng."
         },
         "shadowAndGrowth": {
-          "karmicPattern": "Mô thức rào cản lặp đi lặp lại từ bài học thiếu/nợ nghiệp",
-          "transformationKey": "Chìa khóa hóa giải và chuyển hóa bài học thành sức mạnh"
+          "karmicPattern": "Mô thức tự phá hoại tiềm thức từ bài học thiếu/nợ nghiệp: Tại sao họ hay vướng vào cùng một kiểu rắc rối/thất bại?",
+          "transformationKey": "Đòn bẩy chuyển hóa tâm lý: Bài học bắt buộc phải tốt nghiệp và phương pháp biến vết thương thành sức mạnh độc nhất."
         },
         "strategicRoadmap": {
-          "personalYearFocus": "Chiến lược hành động tối ưu cho Năm Cá Nhân hiện tại",
-          "shortTerm0to6m": "3 hành động cụ thể cần làm ngay trong 6 tháng tới",
-          "midTerm1to3y": "Mục tiêu trọng tâm cho 1-3 năm tới",
-          "longTermPinnacle": "Định hướng để chạm tới Đỉnh Cao Kim Tự Tháp thành công"
+          "personalYearFocus": "Chiến lược Năm Cá Nhân hiện tại: Quy tắc 'Đúng Thời Điểm' để không hao tài tốn lực.",
+          "shortTerm0to6m": "Lộ trình 30-90 ngày tới: 3 hành động cụ thể, đo lường được để sắp xếp lại cuộc sống và tạo đà bứt phá.",
+          "midTerm1to3y": "Mục tiêu trọng tâm 1-3 năm: Đòn bẩy sự nghiệp và tài chính cần tập trung đột phá.",
+          "longTermPinnacle": "Tầm nhìn Đỉnh Cao Cuộc Đời: Cách chuẩn bị để chạm tới đỉnh cao Kim Tự Tháp thành công."
         },
         "coachingQuestions": [
-          "Câu hỏi khai vấn đánh thức tiềm năng 1",
-          "Câu hỏi khai vấn đánh thức tiềm năng 2",
-          "Câu hỏi khai vấn đánh thức tiềm năng 3"
+          "Câu hỏi khai vấn 1: Chạm sâu vào vùng an toàn hoặc sự trì hoãn lớn nhất của họ",
+          "Câu hỏi khai vấn 2: Tháo gỡ xung đột giữa mong muốn bên trong và áp lực bên ngoài",
+          "Câu hỏi khai vấn 3: Hành động can đảm nhất họ cần làm ngay trong tuần này"
         ]
       }
     `;
@@ -138,70 +133,46 @@ export class AIService {
 
       ${level2Context}
 
-      Hãy thực hiện tổng hòa đa yếu tố Cấp độ 3 và xuất ra bài phân tích độc bản theo đúng cấu trúc JSON đã yêu cầu (Ngôn ngữ: ${language}).
+      Hãy thực hiện bài luận giải chuyển hóa tâm lý độc bản sâu sắc, chạm đến trái tim và đánh thức tiềm năng của ${fullName} theo đúng cấu trúc JSON quy định (Ngôn ngữ: ${language}).
     `;
 
-    // Nếu không có Gemini API key hoặc gặp lỗi kết nối, trả về Fallback synthesis chất lượng cao từ Cấp 2
     if (!this.genAI) {
-      this.logger.warn('Không có Gemini API Key, sử dụng Local Synthesis Engine Cấp độ 3');
-      return this.generateLocalLevel3Synthesis(fullName, dob, map, readingProfile);
+      this.logger.error('Chưa cấu hình GEMINI_API_KEY trên máy chủ');
+      throw new InternalServerErrorException('Chưa cấu hình GEMINI_API_KEY trên hệ thống máy chủ.');
     }
 
-    try {
-      const model = this.genAI.getGenerativeModel({
-        model: 'gemini-2.5-flash',
-        systemInstruction,
-      });
+    const primaryModel = this.configService.get<string>('GEMINI_MODEL') || 'gemini-3.1-flash-lite';
+    const candidateModels = [primaryModel, 'gemini-3.5-flash'].filter((v, i, a) => a.indexOf(v) === i);
 
-      const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          temperature: 0.7,
-        },
-      });
+    let lastError: any = null;
 
-      const text = result.response.text();
-      return JSON.parse(text);
-    } catch (error) {
-      this.logger.error('Lỗi khi gọi Gemini API:', error.message);
-      // Fallback an toàn
-      return this.generateLocalLevel3Synthesis(fullName, dob, map, readingProfile);
+    for (const modelName of candidateModels) {
+      try {
+        const model = this.genAI.getGenerativeModel({
+          model: modelName,
+          systemInstruction,
+        });
+
+        const result = await model.generateContent({
+          contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            temperature: 0.7,
+          },
+        });
+
+        const text = result.response.text();
+        return JSON.parse(text);
+      } catch (error) {
+        lastError = error;
+        this.logger.warn(`Model ${modelName} gặp sự cố (${error.message}), đang thử model dự phòng...`);
+      }
     }
-  }
 
-  /**
-   * Bộ sinh dự phòng cục bộ Cấp độ 3 (Local Synthesis Engine)
-   * Đảm bảo hệ thống KHÔNG BAO GIỜ bị sập hay gián đoạn khi mạng chậm hoặc API quota giới hạn
-   */
-  private generateLocalLevel3Synthesis(fullName: string, dob: string, map: any, profile: string): any {
-    const lp = map?.life_path || map?.lifePath || 1;
-    const ex = map?.expression || 1;
-    const hd = map?.heart_desire || map?.soulUrge || 1;
-    const year = map?.personal_year || 1;
-
-    return {
-      identitySynthesis: {
-        title: `Bản Sắc Độc Bản: Sự Hòa Hợp Năng Lượng ${lp} - ${ex}`,
-        coreDynamic: `Đường đời ${lp} dẫn dắt bạn trên con đường kiến tạo giá trị riêng biệt, trong khi Sứ mệnh ${ex} đóng vai trò là phương tiện thực thi giúp bạn hiện thực hóa các mục tiêu lớn. Khi hai nguồn năng lượng này tương hỗ, bạn phát huy tối đa sức bật cá nhân.`,
-        innerVsOuter: `Khao khát linh hồn số ${hd} thôi thúc bạn tìm kiếm sự an yên và thỏa mãn nội tâm, kết hợp cùng năng lượng đối ngoại giúp bạn giữ được sự chân thành trong mọi mối quan hệ đối tác.`,
-        executionPower: `Bộ công cụ tư duy số học Pythagoras giúp bạn nhận diện sớm cơ hội, ra quyết định logic và duy trì kỷ luật hành động.`
-      },
-      shadowAndGrowth: {
-        karmicPattern: `Cần chú trọng thấu cảm và lắng nghe phản hồi của người đồng hành; tránh để áp lực công việc làm lu mờ sự gắn kết tình cảm.`,
-        transformationKey: `Thực hành tự phản tỉnh định kỳ và thiết lập ranh giới làm việc lành mạnh để duy trì năng lượng đỉnh cao.`
-      },
-      strategicRoadmap: {
-        personalYearFocus: `Năm cá nhân số ${year} là thời điểm vàng để tập trung vào việc ${year === 1 ? 'khởi xướng dự án mới' : year === 8 ? 'bứt phá tài chính và gặt hái thành tựu' : 'học tập, tích lũy nội lực và phát triển chuyên sâu'}.`,
-        shortTerm0to6m: `Tối ưu hóa các kỹ năng cốt lõi và xây dựng kế hoạch hành động 90 ngày rõ ràng.`,
-        midTerm1to3y: `Mở rộng tầm ảnh hưởng, xây dựng mạng lưới cộng sự đáng tin cậy.`,
-        longTermPinnacle: `Đạt được sự tự do và cân bằng trọn vẹn giữa sự nghiệp và đời sống cá nhân.`
-      },
-      coachingQuestions: [
-        `Mục tiêu quan trọng nhất trong 6 tháng tới sẽ đưa bạn đến gần nhất với Sứ mệnh ${ex} của mình là gì?`,
-        `Thói quen nào đang lấy đi nhiều năng lượng nhất mà bạn sẵn sàng loại bỏ ngay hôm nay?`,
-        `Nếu bạn tin tưởng 100% vào năng lực Đường đời ${lp} của mình, quyết định táo bạo tiếp theo của bạn sẽ là gì?`
-      ]
-    };
+    this.logger.error(`Tất cả mô hình AI đều không phản hồi:`, lastError?.message);
+    throw new InternalServerErrorException(
+      `Không thể khởi tạo bài luận giải độc bản: ${lastError?.message || 'Lỗi kết nối dịch vụ AI'}`
+    );
   }
 }
+

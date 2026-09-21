@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import axios from 'axios';
 import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
@@ -52,6 +53,23 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [showSupportGuide, setShowSupportGuide] = useState(false);
   const [supportCopied, setSupportCopied] = useState(false);
   const [countdown, setCountdown] = useState(600); // 10 phút
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Khóa cuộn trang phía sau khi modal mở để người dùng tập trung thanh toán
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
 
   const currentUserId = user?.uid || propUserId || 'guest_user';
   const currentUserEmail = user?.email || propUserEmail || '';
@@ -255,7 +273,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     setTimeout(() => setSupportCopied(false), 2500);
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -272,9 +290,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     'Xuất bản Ebook PDF 30+ trang chuẩn in ấn'
   ];
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#0D2B26]/70 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg rounded-3xl bg-[#FFFFFF] border border-[#E2E8E5] p-6 sm:p-8 shadow-2xl text-[#2D3E3A] max-h-[92vh] overflow-y-auto">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-[#0D2B26]/80 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
+      <div className="relative w-full max-w-lg rounded-3xl bg-[#FFFFFF] border border-[#E2E8E5] p-5 sm:p-7 shadow-2xl text-[#2D3E3A] my-auto max-h-[90vh] overflow-y-auto pb-8">
         
         {/* Nút Đóng */}
         <button
@@ -418,12 +436,12 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     <span>Mã VietQR Ngân Hàng ACB (Napas247)</span>
                   </div>
 
-                  <div className="bg-white p-3 rounded-2xl inline-block border border-[#E2E8E5] shadow-sm">
+                  <div className="bg-white p-2.5 sm:p-3 rounded-2xl inline-block border border-[#E2E8E5] shadow-sm">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={qrImageSrc}
                       alt="VietQR Payment Code"
-                      className="w-52 h-52 sm:w-56 sm:h-56 mx-auto object-contain rounded-xl"
+                      className="w-44 h-44 sm:w-52 sm:h-52 mx-auto object-contain rounded-xl"
                     />
                   </div>
 
@@ -603,6 +621,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   READING_PROFILES, 
   ReadingProfileId, 
@@ -32,8 +33,24 @@ export function AdaptiveProfileModal({
   rationalThought = 1
 }: AdaptiveProfileModalProps) {
   const [selectedId, setSelectedId] = useState<ReadingProfileId>(currentProfile);
+  const [mounted, setMounted] = useState(false);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
+  if (!isOpen || !mounted) return null;
 
   const recommendation = recommendReadingProfile(lifePath, soul, personality, rationalThought);
   const recommendedId = recommendation.recommendedProfile.id;
@@ -43,9 +60,9 @@ export function AdaptiveProfileModal({
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-[#E2E8E5] overflow-hidden my-8 max-h-[90vh] flex flex-col">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] bg-black/65 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-[#E2E8E5] overflow-hidden my-auto max-h-[90vh] flex flex-col">
         {/* MODAL HEADER */}
         <div className="p-6 sm:p-8 bg-[#013E37] text-white relative overflow-hidden shrink-0">
           <div className="absolute -right-12 -top-12 w-60 h-60 bg-[#FFEFB3]/10 rounded-full blur-2xl pointer-events-none" />
@@ -199,6 +216,7 @@ export function AdaptiveProfileModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

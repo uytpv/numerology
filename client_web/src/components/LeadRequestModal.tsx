@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import axios from 'axios';
 import { X, UserCheck, MapPin, Phone, Mail, Sparkles, CheckCircle2, Loader2, Award } from 'lucide-react';
 import canvasConfetti from 'canvas-confetti';
@@ -34,10 +35,26 @@ export const LeadRequestModal: React.FC<LeadRequestModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [successResult, setSuccessResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
 
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,9 +91,9 @@ export const LeadRequestModal: React.FC<LeadRequestModalProps> = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0D2B26]/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md rounded-3xl bg-[#FFFFFF] border border-[#E2E8E5] p-7 shadow-2xl text-[#2D3E3A] max-h-[90vh] overflow-y-auto">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-[#0D2B26]/75 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
+      <div className="relative w-full max-w-md rounded-3xl bg-[#FFFFFF] border border-[#E2E8E5] p-6 sm:p-7 shadow-2xl text-[#2D3E3A] my-auto max-h-[90vh] overflow-y-auto pb-6">
         <button
           onClick={onClose}
           className="absolute top-5 right-5 p-2 rounded-full text-[#5F736E] hover:text-[#0D2B26] hover:bg-[#EEF5F3] transition-all"
@@ -221,7 +238,8 @@ export const LeadRequestModal: React.FC<LeadRequestModalProps> = ({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

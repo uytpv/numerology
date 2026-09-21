@@ -6,12 +6,13 @@ import { useAuth } from '@/lib/auth';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import ReportDashboard from '@/components/ReportDashboard';
+import { getApiBaseUrl } from '@/lib/aiReportService';
 import { ArrowLeft, Home, Sparkles, User, LogOut, Compass } from 'lucide-react';
 
 function MapContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user, loginWithGoogle, logout, loading: authLoading } = useAuth();
+  const { user, credits, loginWithGoogle, logout, loading: authLoading } = useAuth();
 
   const id = searchParams.get('id');
   const isExisting = searchParams.get('existing') === '1';
@@ -23,14 +24,31 @@ function MapContent() {
     async function loadCustomer() {
       setLoading(true);
       try {
-        // 1. Try loading from Firestore if valid ID
+        // 1. Thử lấy từ Firestore nếu đã đăng nhập và là chính chủ
         if (id && !id.startsWith('local_')) {
-          const docRef = doc(db, 'customers', id);
-          const snap = await getDoc(docRef);
-          if (snap.exists()) {
-            setCustomer({ id: snap.id, ...snap.data() });
-            setLoading(false);
-            return;
+          try {
+            const docRef = doc(db, 'customers', id);
+            const snap = await getDoc(docRef);
+            if (snap.exists()) {
+              setCustomer({ id: snap.id, ...snap.data() });
+              setLoading(false);
+              return;
+            }
+          } catch (permErr: any) {
+            // Nếu bị Firestore Security Rules chặn (chưa đăng nhập hoặc xem qua link chia sẻ)
+            // Tải an toàn qua Backend Public API
+            try {
+              const baseUrl = getApiBaseUrl();
+              const res = await fetch(`${baseUrl}/api/v1/customers/${id}/public`);
+              if (res.ok) {
+                const publicData = await res.json();
+                setCustomer(publicData);
+                setLoading(false);
+                return;
+              }
+            } catch (apiErr) {
+              console.warn('Không thể tải qua backend public API:', apiErr);
+            }
           }
         }
 
@@ -148,6 +166,10 @@ function MapContent() {
                 <span className="text-xs text-[#013E37] font-bold hidden md:inline px-3 py-1 bg-[#EEF5F3] rounded-xl border border-[#E2E8E5]">
                   {user.displayName || user.email}
                 </span>
+                <span className="text-xs font-extrabold px-2.5 py-1 bg-[#FFEFB3] text-[#013E37] rounded-xl border border-[#F9E79F] flex items-center gap-1 shadow-xs">
+                  <span>🎟️</span>
+                  <span>{credits} lượt</span>
+                </span>
                 <button
                   onClick={logout}
                   className="px-3 py-2 rounded-2xl bg-[#FFFFFF] hover:bg-[#EEF5F3] text-[#5F736E] text-xs font-medium border border-[#E2E8E5] transition-all flex items-center gap-1"
@@ -219,7 +241,7 @@ function MapContent() {
       </main>
 
       {/* FOOTER */}
-      <footer className="border-t border-[#E2E8E5] py-12 px-4 bg-[#FFFFFF] text-center text-xs text-[#5F736E] relative z-10">
+      <footer className="border-t border-[#E2E8E5] py-12 px-4 bg-[#FFFFFF] text-center text-xs text-[#5F736E] relative z-0">
         <div className="max-w-7xl mx-auto space-y-4">
           <div className="text-base font-bold font-heading text-[#013E37]">🔮 Life Maps</div>
           <p className="max-w-md mx-auto leading-relaxed">

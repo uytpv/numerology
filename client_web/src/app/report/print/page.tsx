@@ -571,66 +571,116 @@ function PrintContent() {
             </div>
           </div>
 
-          {/* PHẦN I: BỨC TRANH TỔNG QUAN & TỔNG HÒA ĐA CHIỀU */}
+          {/* PHẦN I: BỨC TRANH TỔNG HÒA ĐỘC BẢN */}
           <div className="space-y-4 print:break-inside-avoid">
             <h3 className="text-base sm:text-lg font-bold font-heading text-[#013E37] uppercase border-l-4 border-[#8C6A81] pl-3">
-              Phần I: Bức Tranh Tổng Hòa Bản Thân & Ma Trận Đa Chiều
+              Phần I: Bức Tranh Tổng Hòa Bản Thân & Bản Sắc Độc Bản (Cấp Độ 3)
             </h3>
 
-            {/* 3 THẾ MẠNH */}
-            <div className="p-4 sm:p-5 bg-[#FAF8F5] rounded-2xl border border-[#E2E8E5] space-y-3 text-xs sm:text-sm leading-relaxed">
-              <div className="font-bold text-[#013E37] uppercase text-xs tracking-wider">
-                1. 3 Thế Mạnh Nổi Bật (Tổ Hợp Năng Lượng Cốt Lõi):
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {synthesis.strengths.map((item, idx) => (
-                  <div key={idx} className="p-3 bg-white rounded-xl border border-[#E2E8E5] space-y-1.5">
-                    <div className="font-bold text-[#013E37] text-xs">{item.title}</div>
-                    <div className="text-[11px] text-[#267D71] font-semibold">{item.indicators}</div>
-                    <p className="text-[11px] text-[#4A5D58]">{item.description}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* 2 CĂNG KÉO */}
-              <div className="font-bold text-[#8C6A81] uppercase text-xs tracking-wider pt-2 border-t border-[#E2E8E5]">
-                2. 2 Căng Kéo Nội Tại Cần Dung Hòa:
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {synthesis.tensions.map((item, idx) => (
-                  <div key={idx} className="p-3 bg-[#FAF5FF] rounded-xl border border-[#8C6A81]/30 space-y-1.5">
-                    <div className="font-bold text-[#8C6A81] text-xs">{item.title}</div>
-                    <p className="text-[11px] text-[#4A5D58]">{item.description}</p>
-                    <div className="text-[11px] text-[#013E37] bg-white p-2 rounded-lg border border-[#8C6A81]/20">
-                      <strong>Giải pháp:</strong> {item.solution}
+            {/* NẾU ĐÃ CÓ BÀI LUẬN GIẢI AI ĐỘC BẢN LƯU SẴN */}
+            {customer?.reports && Object.values(customer.reports).length > 0 ? (
+              (() => {
+                const aiReport = (customer.reports[`3_vi_${profileParam}`] || customer.reports['3_vi_executive'] || Object.values(customer.reports)[0]) as any;
+                return (
+                  <div className="p-4 sm:p-5 bg-[#FAF8F5] rounded-2xl border border-[#E2E8E5] space-y-4 text-xs sm:text-sm leading-relaxed">
+                    <div className="font-bold text-[#013E37] text-sm font-heading border-b border-[#E2E8E5] pb-2">
+                      {aiReport?.identitySynthesis?.title || 'Tổng Hòa Bản Sắc Độc Bản'}
                     </div>
-                  </div>
-                ))}
-              </div>
 
-              {/* 2 VÙNG RÈN & 1 TRỌNG TÂM NĂM */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[#E2E8E5]">
-                <div className="p-3 bg-white rounded-xl border border-[#E2E8E5] space-y-2">
-                  <div className="font-bold text-[#013E37] text-xs uppercase">3. 2 Vùng Rèn Luyện Chủ Đích:</div>
-                  {synthesis.growthFocuses.map((item, idx) => (
-                    <div key={idx} className="text-[11px] text-[#4A5D58]">
-                      <strong>• {item.title}:</strong> {item.guidance}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="p-3 bg-white rounded-xl border border-[#E2E8E5] space-y-1">
+                        <div className="font-bold text-[#013E37] text-xs">Đường Đời × Sứ Mệnh:</div>
+                        <p className="text-[11px] text-[#4A5D58]">{aiReport?.identitySynthesis?.coreDynamic}</p>
+                      </div>
+                      <div className="p-3 bg-[#FAF5FF] rounded-xl border border-[#8C6A81]/30 space-y-1">
+                        <div className="font-bold text-[#8C6A81] text-xs">Linh Hồn × Nhân Cách:</div>
+                        <p className="text-[11px] text-[#4A5D58]">{aiReport?.identitySynthesis?.innerVsOuter}</p>
+                      </div>
+                      <div className="p-3 bg-[#FFFDF5] rounded-xl border border-[#FFEFB3] space-y-1">
+                        <div className="font-bold text-[#013E37] text-xs">Tư Duy × Ngày Sinh:</div>
+                        <p className="text-[11px] text-[#4A5D58]">{aiReport?.identitySynthesis?.executionPower}</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[#E2E8E5]">
+                      <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 space-y-1">
+                        <div className="font-bold text-amber-900 text-xs">⚠️ Mô thức rào cản nợ nghiệp:</div>
+                        <p className="text-[11px] text-amber-950">{aiReport?.shadowAndGrowth?.karmicPattern}</p>
+                      </div>
+                      <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 space-y-1">
+                        <div className="font-bold text-emerald-900 text-xs">🔑 Chìa khóa chuyển hóa bài học:</div>
+                        <p className="text-[11px] text-emerald-950">{aiReport?.shadowAndGrowth?.transformationKey}</p>
+                      </div>
+                    </div>
+
+                    {aiReport?.coachingQuestions?.length > 0 && (
+                      <div className="p-3 bg-[#FAF5FF] rounded-xl border border-[#8C6A81]/30 space-y-1.5">
+                        <div className="font-bold text-[#8C6A81] text-xs">🎯 3 Câu hỏi khai vấn đánh thức tiềm năng:</div>
+                        <ul className="list-disc pl-4 text-[11px] text-[#2D3E3A] space-y-0.5">
+                          {aiReport.coachingQuestions.map((q: string, idx: number) => (
+                            <li key={idx} className="italic">{q}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()
+            ) : (
+              /* NẾU CHƯA CÓ BÀI AI LƯU SẴN (BẢN MA TRẬN CƠ BẢN) */
+              <div className="p-4 sm:p-5 bg-[#FAF8F5] rounded-2xl border border-[#E2E8E5] space-y-3 text-xs sm:text-sm leading-relaxed">
+                <div className="font-bold text-[#013E37] uppercase text-xs tracking-wider">
+                  1. 3 Thế Mạnh Nổi Bật (Tổ Hợp Năng Lượng Cốt Lõi):
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {synthesis.strengths.map((item, idx) => (
+                    <div key={idx} className="p-3 bg-white rounded-xl border border-[#E2E8E5] space-y-1.5">
+                      <div className="font-bold text-[#013E37] text-xs">{item.title}</div>
+                      <div className="text-[11px] text-[#267D71] font-semibold">{item.indicators}</div>
+                      <p className="text-[11px] text-[#4A5D58]">{item.description}</p>
                     </div>
                   ))}
                 </div>
 
-                <div className="p-3 bg-[#FFFDF5] rounded-xl border border-[#FFEFB3] space-y-1.5">
-                  <div className="font-bold text-[#013E37] text-xs uppercase">4. Trọng Tâm Chiến Lược Năm Hiện Tại:</div>
-                  <div className="text-xs font-bold text-[#013E37]">{synthesis.currentYearFocus.title}</div>
-                  <ul className="list-disc pl-4 text-[11px] text-[#2D3E3A] space-y-0.5">
-                    {synthesis.currentYearFocus.actionPriorities.map((act, idx) => (
-                      <li key={idx}>{act}</li>
+                <div className="font-bold text-[#8C6A81] uppercase text-xs tracking-wider pt-2 border-t border-[#E2E8E5]">
+                  2. 2 Căng Kéo Nội Tại Cần Dung Hòa:
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {synthesis.tensions.map((item, idx) => (
+                    <div key={idx} className="p-3 bg-[#FAF5FF] rounded-xl border border-[#8C6A81]/30 space-y-1.5">
+                      <div className="font-bold text-[#8C6A81] text-xs">{item.title}</div>
+                      <p className="text-[11px] text-[#4A5D58]">{item.description}</p>
+                      <div className="text-[11px] text-[#013E37] bg-white p-2 rounded-lg border border-[#8C6A81]/20">
+                        <strong>Giải pháp:</strong> {item.solution}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[#E2E8E5]">
+                  <div className="p-3 bg-white rounded-xl border border-[#E2E8E5] space-y-2">
+                    <div className="font-bold text-[#013E37] text-xs uppercase">3. 2 Vùng Rèn Luyện Chủ Đích:</div>
+                    {synthesis.growthFocuses.map((item, idx) => (
+                      <div key={idx} className="text-[11px] text-[#4A5D58]">
+                        <strong>• {item.title}:</strong> {item.guidance}
+                      </div>
                     ))}
-                  </ul>
+                  </div>
+
+                  <div className="p-3 bg-[#FFFDF5] rounded-xl border border-[#FFEFB3] space-y-1.5">
+                    <div className="font-bold text-[#013E37] text-xs uppercase">4. Trọng Tâm Chiến Lược Năm Hiện Tại:</div>
+                    <div className="text-xs font-bold text-[#013E37]">{synthesis.currentYearFocus.title}</div>
+                    <ul className="list-disc pl-4 text-[11px] text-[#2D3E3A] space-y-0.5">
+                      {synthesis.currentYearFocus.actionPriorities.map((act, idx) => (
+                        <li key={idx}>{act}</li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
+
 
           {/* PHẦN II: CON ĐƯỜNG VÀ SỨ MỆNH */}
           <div className="space-y-4 print:break-after-page">

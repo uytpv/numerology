@@ -23,6 +23,9 @@ import {
   READING_PROFILES, 
   recommendReadingProfile 
 } from '@/lib/adaptiveReadingProfiles';
+import { fetchAIReport, getApiBaseUrl, AIReportData } from '@/lib/aiReportService';
+import { db } from '@/lib/firebase';
+import { collection, addDoc } from 'firebase/firestore';
 import { 
   Sparkles, Printer, UserCheck, Lock, Unlock, Headphones, 
   Compass, ShieldAlert, Award, ArrowRight, Check, AlertCircle, 
@@ -38,7 +41,7 @@ export interface ReportDashboardProps {
 
 export function ReportDashboard({ customer, initialCustomer, isExistingRecord, onRefresh }: ReportDashboardProps) {
   const currentCustomer = customer || initialCustomer;
-  const { user, loginWithGoogle } = useAuth();
+  const { user, credits, loginWithGoogle } = useAuth();
   
   // 3 main tabs: 'triangle' (Bộ số tam giác vàng), 'lifemap' (Life Map 21 chỉ số), 'layer3' (Luận giải đa chiều)
   const [activeTab, setActiveTab] = useState<'triangle' | 'lifemap' | 'layer3'>('triangle');
@@ -98,22 +101,56 @@ export function ReportDashboard({ customer, initialCustomer, isExistingRecord, o
     );
   });
 
-  // Credits count for user: Mặc định là 0 cho khách chưa đăng nhập / chưa nạp credit
-  const [userCredits, setUserCredits] = useState<number>(() => {
-    if (user && typeof (user as any)?.credits === 'number') {
-      return (user as any).credits;
+  // Quản lý trạng thái bài luận giải AI Độc Bản từ Backend
+  const [aiReport, setAiReport] = useState<AIReportData | null>(() => {
+    if (currentCustomer?.reports) {
+      const cacheKey = `${isPaid ? 3 : 0}_vi_${readingProfile}`;
+      return currentCustomer.reports[cacheKey] || null;
     }
-    return 0;
+    return null;
   });
+  const [isLoadingAI, setIsLoadingAI] = useState<boolean>(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
-  // Đồng bộ lại khi user đăng nhập hoặc đổi tài khoản
-  React.useEffect(() => {
-    if (user && typeof (user as any)?.credits === 'number') {
-      setUserCredits((user as any).credits);
-    } else if (!user) {
-      setUserCredits(0);
+  const handleGenerateAIReport = React.useCallback(async () => {
+    if (!currentCustomer?.map) return;
+    setIsLoadingAI(true);
+    setAiError(null);
+    try {
+      const report = await fetchAIReport({
+        fullName,
+        dob: currentCustomer?.dob || '',
+        map: currentCustomer?.map,
+        tier: isPaid ? 3 : 0,
+        language: 'vi',
+        readingProfile,
+        customerId: currentCustomer?.id !== 'local_guest' ? currentCustomer?.id : undefined,
+      });
+      setAiReport(report);
+    } catch (err: any) {
+      console.error('Lỗi khi gọi AI Synthesis Engine:', err);
+      setAiError(err.message || 'Không thể kết nối với dịch vụ AI. Vui lòng thử lại sau.');
+    } finally {
+      setIsLoadingAI(false);
     }
-  }, [user]);
+  }, [currentCustomer, fullName, isPaid, readingProfile]);
+
+  // Tự động kích hoạt gọi AI khi người dùng mở Tab Luận giải đa chiều (layer3) và đã thanh toán
+  React.useEffect(() => {
+    if (activeTab === 'layer3' && isPaid && !aiReport && !isLoadingAI && !aiError) {
+      handleGenerateAIReport();
+    }
+  }, [activeTab, isPaid, aiReport, isLoadingAI, aiError, handleGenerateAIReport]);
+
+  // Reset aiReport khi người dùng đổi phong cách đọc để AI tái tổng hòa theo phong cách mới
+  const handleChangeReadingProfile = (newProfile: ReadingProfileId) => {
+    setReadingProfile(newProfile);
+    setAiReport(null);
+    setAiError(null);
+  };
+
+  // Credits count for user: Lấy thời gian thực từ AuthContext (Firestore users/{uid}.credits)
+  const userCredits = typeof credits === 'number' ? credits : 0;
 
   // Đồng bộ lại khi dữ liệu customer thay đổi
   React.useEffect(() => {
@@ -168,20 +205,81 @@ export function ReportDashboard({ customer, initialCustomer, isExistingRecord, o
     maturity: getIndNum('mat', 5),
   });
 
-  // Handle deduct credit action for Coach / Multi-package users
+  // Handle deduct credit action for Coach / Multi-package / Registered users
   const handleConfirmDeductCredit = async () => {
+    if (!user) {
+      loginWithGoogle();
+      return;
+    }
+
+    if (userCredits < 1) {
+      alert('Tài khoản của bạn hiện không còn lượt mở bài. Vui lòng nạp thêm lượt để tiếp tục.');
+      return;
+    }
+
     setIsDeductingCredit(true);
     try {
-      setUserCredits(prev => Math.max(0, prev - 1));
+      let targetCustomerId = currentCustomer?.id;
+
+      // Nếu khách hàng chưa có ID trên Firestore (hồ sơ vãng lai / local)
+      if (!targetCustomerId || targetCustomerId.startsWith('local_')) {
+        const newRecordData = {
+          ...currentCustomer,
+          userId: user.uid,
+          email: user.email || '',
+          unlockedTier: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        delete newRecordData.id;
+        const docRef = await addDoc(collection(db, 'customers'), newRecordData);
+        targetCustomerId = docRef.id;
+        if (currentCustomer) {
+          currentCustomer.id = targetCustomerId;
+        }
+      }
+
+      // Lấy Firebase ID Token để xác thực với Backend
+      const token = await user.getIdToken();
+      const baseUrl = getApiBaseUrl();
+
+      // Gọi API Backend an toàn trừ 1 credit và kích hoạt Tier 3
+      const res = await fetch(`${baseUrl}/api/v1/customers/${targetCustomerId}/unlock-with-credit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const resData = await res.json();
+      if (!res.ok) {
+        throw new Error(resData?.message || 'Không thể trừ lượt lúc này. Vui lòng thử lại.');
+      }
+
+      // Đánh dấu đã mở khóa thành công
       setIsPaid(true);
 
       if (currentCustomer) {
         currentCustomer.is_paid = true;
-        localStorage.setItem('lifemaps_current_report', JSON.stringify({ ...currentCustomer, is_paid: true }));
+        currentCustomer.tier = 'paid';
+        currentCustomer.unlockedTier = 3;
+        localStorage.setItem('lifemaps_current_report', JSON.stringify({
+          ...currentCustomer,
+          is_paid: true,
+          tier: 'paid',
+          unlockedTier: 3
+        }));
       }
+
       if (onRefresh) onRefresh();
-    } catch (err) {
+
+      // Tự động kích hoạt gọi AI sinh bài độc bản
+      handleGenerateAIReport();
+
+    } catch (err: any) {
       console.error('Lỗi khi trừ lượt:', err);
+      alert(err.message || 'Có lỗi xảy ra khi dùng lượt. Vui lòng thử lại.');
     } finally {
       setIsDeductingCredit(false);
     }
@@ -538,92 +636,57 @@ export function ReportDashboard({ customer, initialCustomer, isExistingRecord, o
           {/* CASE C: ALREADY PAID / UNLOCKED -> RENDER FULL 5-CHAPTER VIP LIFE COACH REPORT */}
           {isPaid && (
             <div className="space-y-8">
-              {/* VIP HEADER BANNER */}
-              <div className="bg-[#013E37] text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div className="absolute -right-16 -top-16 w-80 h-80 bg-[#FFEFB3]/10 rounded-full blur-2xl pointer-events-none" />
-                <div className="relative z-10 space-y-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="px-3 py-1 rounded-full bg-[#FFEFB3] text-[#013E37] text-xs font-extrabold uppercase tracking-wider shadow-sm">
-                      BÁO CÁO LUẬN GIẢI CHUYÊN SÂU (2.000+ TỪ)
+              {/* VIP HEADER BANNER - PREMIUM EDITORIAL DESIGN */}
+              <div className="bg-[#013E37] text-white rounded-3xl p-6 sm:p-10 shadow-xl relative overflow-hidden flex flex-col lg:flex-row lg:items-center justify-between gap-8 border border-[#267D71]/40">
+                <div className="absolute -right-20 -top-20 w-96 h-96 bg-[#FFEFB3]/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="relative z-10 space-y-3 max-w-2xl">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <span className="px-3.5 py-1 rounded-full bg-[#FFEFB3] text-[#013E37] text-[11px] font-extrabold uppercase tracking-widest shadow-xs">
+                      BẢN ĐỒ KHAI VẤN ĐỘC BẢN VIP
                     </span>
-                    <span className="px-3 py-1 rounded-full bg-white/10 text-white text-xs font-semibold">
-                      Cấu Trúc Khai Vấn & Kế Hoạch Hành Động
+                    <span className="px-3 py-1 rounded-full bg-white/10 text-[#E2E8E5] text-xs font-medium border border-white/10">
+                      Tiêu Chuẩn Khoa Học Thực Chứng
                     </span>
                   </div>
-                  <h2 className="text-2xl sm:text-3xl font-bold font-heading text-[#FFEFB3]">
+                  <h2 
+                    className="text-2xl sm:text-3xl lg:text-4xl font-bold font-heading tracking-tight"
+                    style={{ color: '#FFEFB3' }}
+                  >
                     Luận Giải Đa Chiều Độc Bản Của {fullName}
                   </h2>
-                  <p className="text-xs sm:text-sm text-[#E2E8E5] max-w-2xl leading-relaxed">
-                    Bản phân tích hợp nhất 21 chỉ số, 6 cặp liên kết tương tác, bối cảnh nhân khẩu học ({layer3.genderAgeAnalysis.gender}, {layer3.genderAgeAnalysis.ageGroupText}) và giải pháp chuyên sâu cho các vấn đề bạn quan tâm.
+                  <p className="text-xs sm:text-sm text-[#E2E8E5]/90 leading-relaxed font-sans">
+                    Bản tổng hòa hợp nhất 21 chỉ số Pythagoras, bối cảnh nhân khẩu học ({layer3.genderAgeAnalysis.gender}, {layer3.genderAgeAnalysis.ageGroupText}) và phân tích điểm mù hành vi giúp bạn thấu hiểu bản thân và chuyển hóa vượt bậc.
                   </p>
                 </div>
 
                 <div className="relative z-10 flex flex-wrap sm:flex-nowrap items-center gap-3 shrink-0">
                   <button
-                    onClick={() => setIsAdaptiveModalOpen(true)}
-                    className="px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-[#FFEFB3] text-xs font-bold transition-all border border-[#FFEFB3]/40 flex items-center gap-2 shadow-sm"
+                    onClick={() => setIsFocusModalOpen(true)}
+                    className="px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-all border border-white/15 flex items-center gap-2 backdrop-blur-sm cursor-pointer shadow-xs"
+                    title="Thay đổi trọng tâm phân tích (Tài chính, Sự nghiệp, Mối quan hệ)"
                   >
-                    <SlidersHorizontal size={15} />
-                    <span>🎨 Phong Cách: {READING_PROFILES[readingProfile].shortName}</span>
+                    <SlidersHorizontal size={15} className="text-[#FFEFB3]" />
+                    <span>Trọng Tâm ({selectedFocusTopics.length}/3)</span>
                   </button>
+
                   <button
                     onClick={() => setIsCalendarModalOpen(true)}
-                    className="px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-[#FFEFB3] text-xs font-bold transition-all border border-[#FFEFB3]/40 flex items-center gap-2 shadow-sm"
+                    className="px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-all border border-white/15 flex items-center gap-2 backdrop-blur-sm cursor-pointer shadow-xs"
+                    title="Xem lịch năng lượng cá nhân hóa theo từng ngày"
                   >
-                    <Calendar size={15} />
-                    <span>📅 Lịch Năng Lượng (Coach)</span>
+                    <Calendar size={15} className="text-[#FFEFB3]" />
+                    <span>Lịch Năng Lượng</span>
                   </button>
-                  <button
-                    onClick={() => setIsFocusModalOpen(true)}
-                    className="px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-all border border-white/20 flex items-center gap-2 shadow-sm"
-                  >
-                    <span>🎯 Đổi Trọng Tâm ({selectedFocusTopics.length}/3)</span>
-                  </button>
+
                   <a
                     href={`/report/print?id=${currentCustomer?.id || 'local_guest'}&scope=tab3&profile=${readingProfile}&name=${encodeURIComponent(fullName)}&dob=${encodeURIComponent(currentCustomer?.dob || '')}&gender=${encodeURIComponent(currentCustomer?.gender || 'male')}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-5 py-2.5 rounded-xl bg-[#FFEFB3] hover:bg-[#F9E79F] text-[#013E37] text-xs font-extrabold flex items-center gap-2 shadow-md transition-all"
+                    className="px-6 py-3 rounded-2xl bg-[#FFEFB3] hover:bg-[#F9E79F] text-[#013E37] text-xs font-extrabold flex items-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer"
                   >
-                    <Printer size={15} />
-                    <span>Xuất Ebook PDF ({READING_PROFILES[readingProfile].pageCount})</span>
+                    <Printer size={16} />
+                    <span>Xuất Ebook PDF</span>
                   </a>
-                </div>
-              </div>
-
-              {/* ADAPTIVE PROFILE QUICK SELECTOR BAR */}
-              <div className="bg-[#FAF8F5] p-3.5 rounded-2xl border border-[#E2E8E5] flex flex-wrap items-center justify-between gap-3 shadow-xs">
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="font-extrabold uppercase tracking-wider text-[11px] text-[#267D71]">Chế Độ Đọc:</span>
-                  <strong className="text-[#013E37]">{READING_PROFILES[readingProfile].name}</strong>
-                  <span className="text-[#5F736E]">({READING_PROFILES[readingProfile].pageCount})</span>
-                </div>
-                <div className="flex items-center gap-1.5 overflow-x-auto">
-                  {(['executive', 'dynamic', 'deep', 'empathic'] as ReadingProfileId[]).map((pId) => {
-                    const p = READING_PROFILES[pId];
-                    const isActive = readingProfile === pId;
-                    return (
-                      <button
-                        key={pId}
-                        onClick={() => setReadingProfile(pId)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                          isActive
-                            ? 'bg-[#013E37] text-[#FFEFB3] shadow-sm'
-                            : 'bg-white text-[#4A5D58] hover:bg-[#EEF5F3] border border-[#E2E8E5]'
-                        }`}
-                      >
-                        <span>{p.icon}</span>
-                        <span>{p.shortName}</span>
-                      </button>
-                    );
-                  })}
-                  <button
-                    onClick={() => setIsAdaptiveModalOpen(true)}
-                    className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-[#EEF5F3] text-[#267D71] border border-[#E2E8E5] text-xs font-bold transition-all"
-                    title="Xem chi tiết & Tùy chỉnh phong cách"
-                  >
-                    ⚙️ Tùy chỉnh
-                  </button>
                 </div>
               </div>
 
@@ -792,7 +855,7 @@ export function ReportDashboard({ customer, initialCustomer, isExistingRecord, o
                 </div>
               </section>
 
-              {/* BỨC TRANH TỔNG HÒA BẢN THÂN (MULTI-INDICATOR SYNTHESIS FRAMEWORK) */}
+              {/* BỨC TRANH TỔNG HÒA ĐỘC BẢN DO AI ENGINE SINH ĐÍCH THỰC */}
               <section id="synthesis" className="bg-[#FFFFFF] border-2 border-[#8C6A81]/30 rounded-3xl p-6 sm:p-10 shadow-lg space-y-8">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E2E8E5] pb-5">
                   <div className="flex items-center gap-3.5">
@@ -800,115 +863,234 @@ export function ReportDashboard({ customer, initialCustomer, isExistingRecord, o
                       ✨
                     </div>
                     <div>
-                      <span className="text-[11px] font-extrabold uppercase tracking-widest text-[#8C6A81]">
-                        MULTI-INDICATOR SYNTHESIS
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-extrabold uppercase tracking-widest text-[#8C6A81]">
+                          MULTI-FACTOR SYNTHESIS ENGINE (CẤP ĐỘ 3)
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full bg-[#FAF5FF] border border-[#8C6A81]/30 text-[#8C6A81] text-[10px] font-bold">
+                          Độc Bản Cá Nhân Hóa 100%
+                        </span>
+                      </div>
                       <h3 className="text-xl sm:text-2xl font-bold font-heading text-[#0D2B26]">
-                        Bức Tranh Tổng Hòa Bản Thân & Ma Trận Đa Chiều
+                        {aiReport?.identitySynthesis?.title || `Bức Tranh Tổng Hòa Bản Thân Của ${fullName}`}
                       </h3>
                       <p className="text-xs sm:text-sm text-[#5F736E]">
-                        Phân tích liên kết tương tác giữa 21 chỉ số: 3 Thế mạnh vượt trội, 2 Căng kéo nội tại, 2 Vùng rèn luyện chủ đích và 1 Trọng tâm năm hiện tại.
+                        Phân tích sự giao thoa, tương tác và mâu thuẫn nội tâm giữa 21 chỉ số theo chuẩn Khoa Học Thực Chứng & Khai Vấn ICF.
                       </p>
                     </div>
                   </div>
+
+                  <button
+                    onClick={handleGenerateAIReport}
+                    disabled={isLoadingAI}
+                    className="px-4 py-2.5 rounded-xl bg-[#FAF5FF] hover:bg-[#F3E8FF] text-[#8C6A81] border border-[#8C6A81]/40 text-xs font-bold transition-all flex items-center gap-2 self-start sm:self-auto shadow-xs disabled:opacity-60"
+                  >
+                    <span>{isLoadingAI ? '🌀 Đang Luận Giải...' : '🔄 Khởi Tạo Lại Luận Giải AI'}</span>
+                  </button>
                 </div>
 
-                {/* 1. 3 THẾ MẠNH NỔI BẬT */}
-                <div className="space-y-3">
-                  <h4 className="font-bold text-base sm:text-lg text-[#013E37] font-heading flex items-center gap-2">
-                    <span className="px-2.5 py-0.5 bg-[#013E37] text-[#FFEFB3] rounded-lg text-xs font-bold">1</span>
-                    <span>3 Thế Mạnh Nổi Bật (Tổ Hợp Năng Lượng Cốt Lõi):</span>
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {synthesis.strengths.map((item, idx) => (
-                      <div key={idx} className="p-5 bg-[#FAF8F5] rounded-2xl border border-[#E2E8E5] flex flex-col justify-between space-y-3">
-                        <div className="space-y-2">
-                          <div className="inline-block px-2.5 py-1 bg-[#EEF5F3] text-[#013E37] text-xs font-bold rounded-lg border border-[#267D71]/20">
-                            {item.indicators}
+                {/* 1. TRẠNG THÁI ĐANG XỬ LÝ (LOADING) */}
+                {isLoadingAI && (
+                  <div className="p-8 sm:p-12 bg-[#FAF8F5] rounded-3xl border-2 border-dashed border-[#8C6A81]/40 text-center space-y-4 animate-pulse">
+                    <div className="w-16 h-16 mx-auto rounded-2xl bg-[#013E37] text-[#FFEFB3] flex items-center justify-center text-2xl shadow-md">
+                      ✨
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="text-lg sm:text-xl font-bold font-heading text-[#013E37]">
+                        Hệ Thống Đang Đối Sánh & Tổng Hòa Ma Trận Số Học Của Bạn...
+                      </h4>
+                      <p className="text-xs sm:text-sm text-[#5F736E] max-w-lg mx-auto leading-relaxed">
+                        Phân tích sự tương tác giữa Đường Đời, Sứ Mệnh, Linh Hồn và Nợ Nghiệp để kiến tạo bài luận giải độc bản riêng cho {fullName}. Quá trình này mất khoảng 5–10 giây.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. TRẠNG THÁI LỖI MINH BẠCH (ERROR STATE - TUYỆT ĐỐI KHÔNG FALLBACK MẪU) */}
+                {!isLoadingAI && aiError && (
+                  <div className="p-6 sm:p-8 bg-amber-50 rounded-3xl border-2 border-amber-300 text-center space-y-4 shadow-sm">
+                    <div className="w-14 h-14 mx-auto rounded-full bg-amber-100 text-amber-800 flex items-center justify-center text-2xl">
+                      ⚠️
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="text-base sm:text-lg font-bold text-amber-900 font-heading">
+                        Dịch Vụ AI Sinh Luận Giải Độc Bản Đang Cần Kiểm Tra
+                      </h4>
+                      <p className="text-xs sm:text-sm text-amber-800 max-w-lg mx-auto leading-relaxed">
+                        {aiError}
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleGenerateAIReport}
+                      className="px-6 py-2.5 rounded-xl bg-[#013E37] hover:bg-[#0D2B26] text-[#FFEFB3] text-xs font-bold transition-all shadow-md inline-flex items-center gap-2"
+                    >
+                      <span>🔄 Thử Lại Kết Nối AI</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* 3. TRẠNG THÁI HIỂN THỊ DỮ LIỆU ĐỘC BẢN THỰC SỰ TỪ AI */}
+                {!isLoadingAI && !aiError && aiReport && (
+                  <div className="space-y-8">
+                    {/* KHỐI 1: HẠT NHÂN BẢN SẮC & NỘI TÂM */}
+                    <div className="space-y-4">
+                      <h4 className="font-bold text-base sm:text-lg text-[#013E37] font-heading flex items-center gap-2">
+                        <span className="px-2.5 py-0.5 bg-[#013E37] text-[#FFEFB3] rounded-lg text-xs font-bold">1</span>
+                        <span>Bản Sắc Độc Bản & Động Lực Nội Tại:</span>
+                      </h4>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="p-5 bg-[#FAF8F5] rounded-2xl border border-[#E2E8E5] space-y-2.5">
+                          <span className="px-2.5 py-1 bg-[#EEF5F3] text-[#013E37] text-xs font-bold rounded-lg inline-block">
+                            Đường Đời × Sứ Mệnh
+                          </span>
+                          <h5 className="font-bold text-sm sm:text-base text-[#013E37] font-heading">
+                            Trục Năng Lượng Cốt Lõi
+                          </h5>
+                          <p className="text-xs sm:text-sm text-[#4A5D58] leading-relaxed">
+                            {aiReport.identitySynthesis.coreDynamic}
+                          </p>
+                        </div>
+
+                        <div className="p-5 bg-[#FAF5FF] rounded-2xl border border-[#8C6A81]/20 space-y-2.5">
+                          <span className="px-2.5 py-1 bg-white text-[#8C6A81] text-xs font-bold rounded-lg inline-block border border-[#8C6A81]/30">
+                            Linh Hồn × Nhân Cách
+                          </span>
+                          <h5 className="font-bold text-sm sm:text-base text-[#8C6A81] font-heading">
+                            Bên Trong vs Biểu Đạt Bên Ngoài
+                          </h5>
+                          <p className="text-xs sm:text-sm text-[#4A5D58] leading-relaxed">
+                            {aiReport.identitySynthesis.innerVsOuter}
+                          </p>
+                        </div>
+
+                        <div className="p-5 bg-[#FFFDF5] rounded-2xl border border-[#FFEFB3] space-y-2.5">
+                          <span className="px-2.5 py-1 bg-[#013E37] text-[#FFEFB3] text-xs font-bold rounded-lg inline-block">
+                            Tư Duy × Ngày Sinh
+                          </span>
+                          <h5 className="font-bold text-sm sm:text-base text-[#013E37] font-heading">
+                            Bộ Công Cụ Thực Thi
+                          </h5>
+                          <p className="text-xs sm:text-sm text-[#4A5D58] leading-relaxed">
+                            {aiReport.identitySynthesis.executionPower}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* KHỐI 2: VÙNG TỐI & CHÌA KHÓA CHUYỂN HÓA BÀI HỌC */}
+                    <div className="space-y-4">
+                      <h4 className="font-bold text-base sm:text-lg text-[#8C6A81] font-heading flex items-center gap-2">
+                        <span className="px-2.5 py-0.5 bg-[#8C6A81] text-white rounded-lg text-xs font-bold">2</span>
+                        <span>Vùng Tối & Chìa Khóa Chuyển Hóa Bài Học (Shadow & Growth):</span>
+                      </h4>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-5 bg-amber-50/70 rounded-2xl border border-amber-200/80 space-y-2">
+                          <div className="font-bold text-xs uppercase tracking-wider text-amber-900">
+                            ⚠️ Mô Thức Rào Cản Lặp Lại:
                           </div>
-                          <h5 className="font-bold text-sm sm:text-base text-[#013E37] font-heading leading-snug">
-                            {item.title}
+                          <p className="text-xs sm:text-sm text-amber-950 leading-relaxed">
+                            {aiReport.shadowAndGrowth.karmicPattern}
+                          </p>
+                        </div>
+
+                        <div className="p-5 bg-emerald-50/70 rounded-2xl border border-emerald-200/80 space-y-2">
+                          <div className="font-bold text-xs uppercase tracking-wider text-emerald-900">
+                            🔑 Chìa Khóa Hóa Giải & Bứt Phá:
+                          </div>
+                          <p className="text-xs sm:text-sm text-emerald-950 leading-relaxed">
+                            {aiReport.shadowAndGrowth.transformationKey}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* KHỐI 3: LỘ TRÌNH HÀNH ĐỘNG CHIẾN LƯỢC */}
+                    <div className="space-y-4">
+                      <h4 className="font-bold text-base sm:text-lg text-[#013E37] font-heading flex items-center gap-2">
+                        <span className="px-2.5 py-0.5 bg-[#013E37] text-[#FFEFB3] rounded-lg text-xs font-bold">3</span>
+                        <span>Lộ Trình Hành Động Chiến Lược (Strategic Roadmap):</span>
+                      </h4>
+
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="p-4 bg-[#EEF5F3] rounded-2xl border border-[#267D71]/30 space-y-2">
+                          <div className="text-[11px] font-extrabold uppercase text-[#013E37]">Năm Cá Nhân Hiện Tại:</div>
+                          <p className="text-xs text-[#2D3E3A] leading-relaxed">
+                            {aiReport.strategicRoadmap.personalYearFocus}
+                          </p>
+                        </div>
+
+                        <div className="p-4 bg-[#FAF8F5] rounded-2xl border border-[#E2E8E5] space-y-2">
+                          <div className="text-[11px] font-extrabold uppercase text-[#013E37]">Hành Động 6 Tháng Tới:</div>
+                          <p className="text-xs text-[#2D3E3A] leading-relaxed">
+                            {aiReport.strategicRoadmap.shortTerm0to6m}
+                          </p>
+                        </div>
+
+                        <div className="p-4 bg-[#FAF8F5] rounded-2xl border border-[#E2E8E5] space-y-2">
+                          <div className="text-[11px] font-extrabold uppercase text-[#013E37]">Mục Tiêu 1–3 Năm:</div>
+                          <p className="text-xs text-[#2D3E3A] leading-relaxed">
+                            {aiReport.strategicRoadmap.midTerm1to3y}
+                          </p>
+                        </div>
+
+                        <div className="p-4 bg-[#FFFDF5] rounded-2xl border border-[#FFEFB3] space-y-2">
+                          <div className="text-[11px] font-extrabold uppercase text-[#013E37]">Đỉnh Cao Dài Hạn:</div>
+                          <p className="text-xs text-[#013E37] leading-relaxed">
+                            {aiReport.strategicRoadmap.longTermPinnacle}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* KHỐI 4: CÂU HỎI KHAI VẤN ĐỘC BẢN */}
+                    {aiReport.coachingQuestions?.length > 0 && (
+                      <div className="p-6 bg-[#FAF5FF] rounded-2xl border border-[#8C6A81]/30 space-y-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">🎯</span>
+                          <h5 className="font-bold text-sm sm:text-base text-[#8C6A81] font-heading">
+                            3 Câu Hỏi Khai Vấn Đánh Thức Tiềm Năng Dành Riêng Cho Bạn:
                           </h5>
                         </div>
-                        <p className="text-xs sm:text-sm text-[#4A5D58] leading-relaxed">
-                          {item.description}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 2. 2 CĂNG KÉO NỘI TẠI */}
-                <div className="space-y-3">
-                  <h4 className="font-bold text-base sm:text-lg text-[#8C6A81] font-heading flex items-center gap-2">
-                    <span className="px-2.5 py-0.5 bg-[#8C6A81] text-white rounded-lg text-xs font-bold">2</span>
-                    <span>2 Căng Kéo Nội Tại Cần Dung Hòa (Internal Tensions):</span>
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {synthesis.tensions.map((item, idx) => (
-                      <div key={idx} className="p-5 bg-[#FAF5FF] rounded-2xl border border-[#8C6A81]/25 space-y-3">
-                        <div className="inline-block px-2.5 py-1 bg-white text-[#8C6A81] text-xs font-bold rounded-lg border border-[#8C6A81]/30">
-                          {item.indicators}
-                        </div>
-                        <h5 className="font-bold text-sm sm:text-base text-[#8C6A81] font-heading">
-                          {item.title}
-                        </h5>
-                        <p className="text-xs sm:text-sm text-[#4A5D58] leading-relaxed">
-                          {item.description}
-                        </p>
-                        <div className="p-3.5 bg-white rounded-xl border border-[#8C6A81]/20 text-xs sm:text-sm text-[#013E37] leading-relaxed">
-                          <strong>💡 Giải pháp dung hòa:</strong> {item.solution}
+                        <div className="space-y-2">
+                          {aiReport.coachingQuestions.map((q, idx) => (
+                            <div key={idx} className="p-3 bg-white rounded-xl border border-[#8C6A81]/20 text-xs sm:text-sm text-[#013E37] flex items-start gap-2.5">
+                              <span className="w-5 h-5 rounded-full bg-[#8C6A81] text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                                {idx + 1}
+                              </span>
+                              <span className="italic font-medium">{q}</span>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    ))}
+                    )}
                   </div>
-                </div>
+                )}
 
-                {/* 3. 2 VÙNG RÈN LUYỆN CHỦ ĐÍCH & 1 TRỌNG TÂM NĂM */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* 2 Vùng rèn luyện */}
-                  <div className="p-5 bg-[#FAF8F5] rounded-2xl border border-[#E2E8E5] space-y-3">
-                    <h4 className="font-bold text-base text-[#013E37] font-heading flex items-center gap-2">
-                      <span className="px-2 py-0.5 bg-[#013E37] text-white rounded-md text-xs font-bold">3</span>
-                      <span>2 Vùng Rèn Luyện Chủ Đích:</span>
-                    </h4>
-                    <div className="space-y-3">
-                      {synthesis.growthFocuses.map((item, idx) => (
-                        <div key={idx} className="p-3.5 bg-white rounded-xl border border-[#E2E8E5] space-y-1 text-xs sm:text-sm leading-relaxed">
-                          <div className="font-bold text-[#013E37]">{item.title} ({item.indicator})</div>
-                          <p className="text-[#4A5D58]">{item.guidance}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* 1 Trọng tâm năm hiện tại */}
-                  <div className="p-5 bg-[#FFFDF5] rounded-2xl border-2 border-[#FFEFB3] space-y-3 flex flex-col justify-between">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="px-2.5 py-1 bg-[#013E37] text-[#FFEFB3] font-bold text-xs rounded-lg">
-                          TRỌNG TÂM CHIẾN LƯỢC
-                        </span>
-                        <span className="text-xs font-semibold text-[#5F736E]">Năm hiện tại</span>
-                      </div>
-                      <h4 className="font-bold text-base sm:text-lg text-[#013E37] font-heading">
-                        {synthesis.currentYearFocus.title}
+                {/* 4. TRẠNG THÁI CHƯA GỌI AI */}
+                {!isLoadingAI && !aiError && !aiReport && (
+                  <div className="p-8 bg-[#FAF8F5] rounded-3xl border border-[#E2E8E5] text-center space-y-3">
+                    <div className="text-2xl">✨</div>
+                    <div className="space-y-1">
+                      <h4 className="text-base font-bold text-[#013E37]">
+                        Khởi Tạo Bài Luận Giải Đa Chiều Độc Bản
                       </h4>
-                      <p className="text-xs sm:text-sm text-[#4A5D58]">
-                        3 Hành động ưu tiên trong năm nay:
+                      <p className="text-xs text-[#5F736E] max-w-md mx-auto">
+                        Bấm nút bên dưới để hệ thống AI phân tích sự tương tác giữa 21 chỉ số của {fullName} và sinh bài phân tích độc bản theo thời gian thực.
                       </p>
                     </div>
-                    <ul className="space-y-2 text-xs sm:text-sm text-[#2D3E3A]">
-                      {synthesis.currentYearFocus.actionPriorities.map((act, idx) => (
-                        <li key={idx} className="flex items-start gap-2 bg-white/80 p-2.5 rounded-xl border border-[#FFEFB3]">
-                          <span className="font-bold text-[#267D71] shrink-0">✓</span>
-                          <span>{act}</span>
-                        </li>
-                      ))}
-                    </ul>
+                    <button
+                      onClick={handleGenerateAIReport}
+                      className="px-6 py-2.5 rounded-xl bg-[#013E37] hover:bg-[#0D2B26] text-[#FFEFB3] text-xs font-bold transition-all shadow-md inline-flex items-center gap-2"
+                    >
+                      <Sparkles size={14} />
+                      <span>Tổng Hòa Bản Sắc Bằng AI Ngay</span>
+                    </button>
                   </div>
-                </div>
+                )}
               </section>
+
 
               {/* CHƯƠNG 1: TRỤC XƯƠNG SỐNG & BẢN ĐỒ BẢN THÂN */}
               <section id="ch1" className="bg-[#FFFFFF] border border-[#E2E8E5] rounded-3xl p-6 sm:p-10 shadow-md space-y-8">
@@ -1391,6 +1573,84 @@ export function ReportDashboard({ customer, initialCustomer, isExistingRecord, o
                   rationalThought={getIndNum('rat', 1)}
                 />
               </section>
+
+              {/* STRATEGIC CONVERSION & UPSELL CARDS (HƯỚNG TỚI HÀNH ĐỘNG & TĂNG TRƯỞNG) */}
+              <section className="pt-6 border-t-2 border-[#E2E8E5] space-y-6">
+                <div className="text-center space-y-2 max-w-xl mx-auto">
+                  <span className="text-[11px] font-extrabold uppercase tracking-widest text-[#267D71]">
+                    HÀNH TRÌNH CHUYỂN HÓA TIẾP THEO
+                  </span>
+                  <h3 className="text-2xl sm:text-3xl font-bold font-heading text-[#013E37]">
+                    Biến Nhận Thức Thành Kết Quả Thực Tế
+                  </h3>
+                  <p className="text-xs sm:text-sm text-[#5F736E] leading-relaxed">
+                    Bản đồ số học là tấm gương soi chiếu bản thân. Để tạo ra bước nhảy vọt trong sự nghiệp và cuộc sống, hãy lựa chọn bước đi tiếp theo của bạn:
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* CARD 1: COACHING 1:1 VỚI MASTER COACH */}
+                  <div className="bg-[#013E37] text-white rounded-3xl p-6 sm:p-8 shadow-xl flex flex-col justify-between space-y-6 relative overflow-hidden border border-[#267D71]/40">
+                    <div className="absolute -right-12 -bottom-12 w-48 h-48 bg-[#FFEFB3]/10 rounded-full blur-2xl pointer-events-none" />
+                    <div className="space-y-3 relative z-10">
+                      <div className="w-12 h-12 rounded-2xl bg-[#FFEFB3] text-[#013E37] flex items-center justify-center text-xl font-extrabold shadow-sm">
+                        🤝
+                      </div>
+                      <span className="px-3 py-0.5 rounded-full bg-white/10 text-[#FFEFB3] text-[11px] font-bold uppercase tracking-wider inline-block">
+                        Tham Vấn Chuyên Sâu 1:1
+                      </span>
+                      <h4 
+                        className="text-xl sm:text-2xl font-bold font-heading"
+                        style={{ color: '#FFEFB3' }}
+                      >
+                        Gỡ Bỏ Điểm Nghẽn Cùng Master Coach
+                      </h4>
+                      <p className="text-xs sm:text-sm text-[#E2E8E5]/90 leading-relaxed font-sans">
+                        Buổi làm việc riêng tư 60–90 phút giúp bạn phân tích sâu điểm mù tâm lý, thiết lập kế hoạch chuyển hóa sự nghiệp và tài chính phù hợp với chu kỳ năm hiện tại của riêng bạn.
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => setIsLeadModalOpen(true)}
+                      className="w-full py-3.5 px-6 rounded-2xl bg-[#FFEFB3] hover:bg-[#F9E79F] text-[#013E37] font-extrabold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer relative z-10"
+                    >
+                      <UserCheck size={18} />
+                      <span>Đặt Lịch Tham Vấn 1:1 Ngay</span>
+                    </button>
+                  </div>
+
+                  {/* CARD 2: BẢN ĐỒ NGƯỜI THÂN & TƯƠNG HỢP (VIRAL LOOP / TẬN DỤNG LƯỢT) */}
+                  <div className="bg-[#FFFFFF] border-2 border-[#267D71]/30 rounded-3xl p-6 sm:p-8 shadow-xl flex flex-col justify-between space-y-6">
+                    <div className="space-y-3">
+                      <div className="w-12 h-12 rounded-2xl bg-[#EEF5F3] text-[#013E37] flex items-center justify-center text-xl font-extrabold shadow-sm border border-[#267D71]/20">
+                        👥
+                      </div>
+                      <span className="px-3 py-0.5 rounded-full bg-[#EEF5F3] text-[#013E37] text-[11px] font-bold uppercase tracking-wider inline-block border border-[#267D71]/20">
+                        Bản Đồ Thấu Cảm & Tương Hợp
+                      </span>
+                      <h4 className="text-xl sm:text-2xl font-bold font-heading text-[#013E37]">
+                        Giải Mã Bản Đồ Cho Người Thân & Đối Tác
+                      </h4>
+                      <p className="text-xs sm:text-sm text-[#5F736E] leading-relaxed font-sans">
+                        Một mối quan hệ bền vững bắt đầu từ sự thấu cảm sâu sắc. Khám phá bản đồ của Vợ/Chồng, Con cái hoặc Đối tác kinh doanh để hòa hợp năng lượng và cùng nhau bứt phá.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <a
+                        href="/"
+                        className="w-full py-3.5 px-6 rounded-2xl bg-[#EEF5F3] hover:bg-[#E2EFEA] text-[#013E37] font-extrabold text-xs sm:text-sm border border-[#267D71]/30 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                      >
+                        <Sparkles size={16} className="text-[#267D71]" />
+                        <span>Tra Cứu Bản Đồ Cho Người Khác</span>
+                      </a>
+                      <p className="text-[11px] text-center text-[#93A39F]">
+                        {userCredits > 0 ? `Bạn đang có ${userCredits} lượt khả dụng trong tài khoản` : 'Nhận đầy đủ 21 chỉ số và phân tích tương tác'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </section>
             </div>
           )}
         </div>
@@ -1398,8 +1658,8 @@ export function ReportDashboard({ customer, initialCustomer, isExistingRecord, o
 
       {/* LIFE FOCUS SELECTION MODAL (1-3 TOPICS) */}
       {isFocusModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0D2B26]/70 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-white border border-[#E2E8E5] rounded-3xl max-w-2xl w-full p-6 sm:p-8 relative shadow-2xl my-8 space-y-6">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-[#0D2B26]/75 backdrop-blur-md overflow-y-auto">
+          <div className="bg-white border border-[#E2E8E5] rounded-3xl max-w-2xl w-full p-6 sm:p-8 relative shadow-2xl my-auto max-h-[90vh] overflow-y-auto space-y-6">
             <div className="flex items-center justify-between border-b border-[#E2E8E5] pb-4">
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-[#267D71] font-heading">
@@ -1500,11 +1760,11 @@ export function ReportDashboard({ customer, initialCustomer, isExistingRecord, o
 
       {/* PAYMENT / PRICING MODAL TRIGGERED FROM TAB 3 */}
       {isPaymentModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0D2B26]/60 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-[#FFFFFF] border border-[#E2E8E5] rounded-3xl max-w-4xl w-full p-6 relative shadow-2xl my-8">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-[#0D2B26]/75 backdrop-blur-md overflow-y-auto">
+          <div className="bg-[#FFFFFF] border border-[#E2E8E5] rounded-3xl max-w-4xl w-full p-6 relative shadow-2xl my-auto max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setIsPaymentModalOpen(false)}
-              className="absolute top-4 right-4 p-2 text-[#5F736E] hover:text-[#0D2B26] rounded-full transition-all text-xl"
+              className="absolute top-4 right-4 p-2 text-[#5F736E] hover:text-[#0D2B26] rounded-full transition-all text-xl cursor-pointer"
             >
               ✕
             </button>
@@ -1553,8 +1813,8 @@ export function ReportDashboard({ customer, initialCustomer, isExistingRecord, o
 
       {/* TOPIC EXPANSION MODAL (MỞ RỘNG THÊM VẤN ĐỀ QUAN TÂM +15.000Đ/CHỦ ĐỀ) */}
       {isTopicExpansionModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0D2B26]/60 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-[#FFFFFF] border border-[#E2E8E5] rounded-3xl max-w-2xl w-full p-6 sm:p-8 relative shadow-2xl my-8 space-y-6">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-[#0D2B26]/75 backdrop-blur-md overflow-y-auto">
+          <div className="bg-[#FFFFFF] border border-[#E2E8E5] rounded-3xl max-w-2xl w-full p-6 sm:p-8 relative shadow-2xl my-auto max-h-[90vh] overflow-y-auto space-y-6">
             <div className="flex items-center justify-between border-b border-[#E2E8E5] pb-4">
               <div className="flex items-center gap-2">
                 <span className="text-2xl">✨</span>

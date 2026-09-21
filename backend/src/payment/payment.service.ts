@@ -241,14 +241,60 @@ export class PaymentService {
       throw new NotFoundException(`Không tìm thấy gói dịch vụ: ${params.planId}`);
     }
 
+    const db = this.firebaseService.db();
+
+    // 1. Kiểm tra nếu user đã có đơn hàng PENDING cùng gói trong 15 phút gần đây thì tái sử dụng
+    if (params.userId && params.userId !== 'guest_user') {
+      try {
+        const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+        const existingSnap = await db.collection('orders')
+          .where('userId', '==', params.userId)
+          .where('planId', '==', params.planId)
+          .where('status', '==', 'PENDING')
+          .where('createdAt', '>=', fifteenMinsAgo)
+          .limit(1)
+          .get();
+
+        if (!existingSnap.empty) {
+          const existingData = existingSnap.docs[0].data();
+          this.logger.log(`Tái sử dụng đơn hàng PENDING #${existingData.orderCode} còn hiệu lực cho user ${params.userId}`);
+
+          const qrResult: VietQRResponse = await this.vietQRService.generateQRCode({
+            amount: existingData.amount,
+            orderCode: existingData.orderCode,
+            description: existingData.orderCode,
+            accountNo: '12688937',
+            accountName: 'TRA PHUC VINH UY',
+            bin: '970416',
+            template: 'hjTz6tf',
+          });
+
+          return {
+            orderCode: existingData.orderCode,
+            plan,
+            vietqr: qrResult,
+            payos: {
+              orderCode: existingData.orderCode,
+              amount: existingData.amount,
+              description: existingData.orderCode,
+              accountNumber: qrResult.accountNumber,
+              accountName: qrResult.accountName,
+              qrCode: qrResult.qrDataURL || qrResult.quickLinkUrl,
+              checkoutUrl: qrResult.quickLinkUrl,
+            }
+          };
+        }
+      } catch (err: any) {
+        this.logger.warn(`Lỗi tìm đơn PENDING cũ, tạo đơn mới: ${err.message}`);
+      }
+    }
+
     // Sinh mã đơn hàng dạng TSH + 6 số ngẫu nhiên
     const randomSuffix = Math.floor(100000 + Math.random() * 900000);
     const orderCode = `TSH${randomSuffix}`;
     const memo = `TSH${randomSuffix}`;
 
-    const db = this.firebaseService.db();
-
-    // 1. Tạo bản ghi đơn hàng trong Firestore collection 'orders'
+    // 2. Tạo bản ghi đơn hàng mới trong Firestore collection 'orders'
     const orderRecord = {
       orderCode,
       planId: plan.id,
@@ -321,6 +367,7 @@ export class PaymentService {
 
     try {
       const activated = await db.runTransaction(async (transaction) => {
+        // --- 1. TẤT CẢ CÁC LỆNH READ PHẢI CHẠY TRƯỚC ---
         const orderDoc = await transaction.get(orderRef);
         if (!orderDoc.exists) {
           this.logger.warn(`Không tìm thấy đơn hàng #${orderCode} trong Firestore!`);
@@ -333,7 +380,14 @@ export class PaymentService {
           return true;
         }
 
-        // 1. Cập nhật trạng thái đơn hàng thành PAID bên trong transaction
+        let userDoc: any = null;
+        let userRef: any = null;
+        if (orderData.userId && orderData.userId !== 'guest_user') {
+          userRef = db.collection('users').doc(orderData.userId);
+          userDoc = await transaction.get(userRef); // READ TRƯỚC WRITE!
+        }
+
+        // --- 2. TẤT CẢ CÁC LỆNH WRITE THỰC HIỆN SAU ---
         const paidAt = new Date().toISOString();
         transaction.update(orderRef, {
           status: 'PAID',
@@ -342,12 +396,8 @@ export class PaymentService {
           updatedAt: paidAt,
         });
 
-        // 2. Cập nhật quyền lợi cho User tài khoản (Atomic Credits Increment & Subscription)
-        if (orderData.userId && orderData.userId !== 'guest_user') {
-          const userRef = db.collection('users').doc(orderData.userId);
-          const userDoc = await transaction.get(userRef);
+        if (userRef) {
           const addedCredits = Number(orderData.creditsGranted) || 0;
-
           const updatePayload: any = {
             updatedAt: paidAt,
           };
@@ -374,7 +424,7 @@ export class PaymentService {
             };
           }
 
-          if (userDoc.exists) {
+          if (userDoc && userDoc.exists) {
             transaction.update(userRef, updatePayload);
           } else {
             transaction.set(userRef, {

@@ -8,11 +8,13 @@ import {
   GoogleAuthProvider, 
   signOut
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot, collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
 interface AuthContextType {
   user: User | null;
+  credits: number;
+  userData: any;
   isAdmin: boolean;
   isCoach: boolean;
   loading: boolean;
@@ -32,6 +34,8 @@ const ADMIN_EMAILS = [
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
+  credits: 0,
+  userData: null,
   isAdmin: false,
   isCoach: false,
   loading: true,
@@ -42,20 +46,29 @@ const AuthContext = createContext<AuthContextType>({
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [credits, setCredits] = useState<number>(0);
+  const [userData, setUserData] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isCoach, setIsCoach] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    let unsubscribeSnapshot: (() => void) | null = null;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       
+      if (unsubscribeSnapshot) {
+        unsubscribeSnapshot();
+        unsubscribeSnapshot = null;
+      }
+
       if (currentUser) {
         try {
           const userEmail = (currentUser.email || '').toLowerCase();
           const isHardcodedAdmin = ADMIN_EMAILS.includes(userEmail) || userEmail.includes('vinhuy') || userEmail.includes('uytpv');
 
-          // Kiểm tra / Tạo hồ sơ User trong Firestore
+          // Kiểm tra / Tạo hồ sơ User trong Firestore nếu chưa có
           const userDocRef = doc(db, 'users', currentUser.uid);
           const userDocSnap = await getDoc(userDocRef);
           
@@ -70,12 +83,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
             });
-            setIsAdmin(isHardcodedAdmin);
-            setIsCoach(isHardcodedAdmin);
           } else {
             const data = userDocSnap.data();
-            const hasAdminRole = data?.role === 'admin' || isHardcodedAdmin;
-            
             // Tự động nâng cấp quyền Admin trong Firestore nếu là admin email (KHÔNG ghi đè credits)
             if (isHardcodedAdmin && data?.role !== 'admin') {
               await setDoc(userDocRef, { role: 'admin' }, { merge: true });
@@ -99,19 +108,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 console.warn('Không thể tự động khôi phục credits:', recErr);
               }
             }
-
-            setIsAdmin(hasAdminRole);
-            setIsCoach(data?.role === 'coach' || hasAdminRole || !!data?.isCoach);
           }
+
+          // LẮNG NGHE REALTIME THAY ĐỔI CỦA USER DOCUMENT (ĐẶC BIỆT LÀ CREDITS VÀ ROLE)
+          unsubscribeSnapshot = onSnapshot(userDocRef, (snap) => {
+            if (snap.exists()) {
+              const d = snap.data();
+              const cr = typeof d?.credits === 'number' ? d.credits : 0;
+              setCredits(cr);
+              setUserData({ id: snap.id, ...d });
+              
+              const hasAdminRole = d?.role === 'admin' || isHardcodedAdmin;
+              setIsAdmin(hasAdminRole);
+              setIsCoach(d?.role === 'coach' || hasAdminRole || !!d?.isCoach);
+            }
+          }, (err) => {
+            console.error('Lỗi onSnapshot users:', err);
+          });
+
         } catch (error) {
           console.error('Lỗi khi đọc/ghi thông tin người dùng từ Firestore:', error);
-          // Fallback check email
           const userEmail = (currentUser.email || '').toLowerCase();
           const isHardcodedAdmin = ADMIN_EMAILS.includes(userEmail) || userEmail.includes('vinhuy') || userEmail.includes('uytpv');
           setIsAdmin(isHardcodedAdmin);
           setIsCoach(isHardcodedAdmin);
         }
       } else {
+        setCredits(0);
+        setUserData(null);
         setIsAdmin(false);
         setIsCoach(false);
       }
@@ -119,7 +143,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeSnapshot) {
+        unsubscribeSnapshot();
+      }
+    };
   }, []);
 
   const grantAdminAccess = async (): Promise<boolean> => {
@@ -159,7 +188,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAdmin, isCoach, loading, loginWithGoogle, logout, grantAdminAccess }}>
+    <AuthContext.Provider value={{ user, credits, userData, isAdmin, isCoach, loading, loginWithGoogle, logout, grantAdminAccess }}>
       {children}
     </AuthContext.Provider>
   );
